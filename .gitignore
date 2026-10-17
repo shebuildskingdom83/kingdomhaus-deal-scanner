@@ -1,0 +1,37 @@
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+.cache/
+*.tsbuildinfo
+
+# Local secrets; only the blank template belongs in source control
+.env
+.env.*
+!.env.example
+.npmrc
+credentials/
+secrets/
+credentials.json
+tokens.json
+service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.token
+*.secret
+
+# Local editor, operating-system, and temporary files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
