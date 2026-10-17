@@ -1,0 +1,1 @@
+# kingdomhaus-deal-scanner
