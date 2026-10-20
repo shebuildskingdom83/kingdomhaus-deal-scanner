@@ -1371,3 +1371,32 @@ select:focus-visible { outline:3px solid #9c7928; outline-offset:3px; }
 }
 .website-project-gallery .listing-photo img { object-fit: contain; }
 .website-project-note { color: var(--muted); font-size: 0.875rem; line-height: 1.5; }
+
+.intelligence-panel { flex-direction:column; gap:16px; }
+.khda-introduction { width:100%; max-width:84ch; }
+.intelligence-panel .khda-introduction h3 { color:#fffefa; margin:0 0 6px; font-size:18px; }
+.khda-introduction p { margin:0; color:#fffefa; font-size:15px; line-height:1.6; }
+.khda-introduction .khda-subtitle { margin-bottom:8px; color:#f3d785; font-style:italic; }
+.diligence-counts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:0; }
+.diligence-counts dt { color:var(--slate); font-size:14px; line-height:1.5; }
+.diligence-counts dd { margin:6px 0 0; color:var(--ink); font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; }
+.diligence-details { margin-top:16px; border-top:1px solid var(--line-soft); }
+.diligence-details>summary { display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:48px; padding:10px 0; cursor:pointer; list-style:none; color:var(--ink); font-size:15px; font-weight:600; }
+.diligence-details>summary::-webkit-details-marker { display:none; }
+.diligence-details>summary:hover { color:#725000; }
+.diligence-details>summary:focus-visible { outline:2px solid #725000; outline-offset:4px; border-radius:2px; }
+.diligence-details>summary svg { width:20px; height:20px; flex-shrink:0; transition:transform 180ms ease-out; }
+.diligence-details[open]>summary svg { transform:rotate(180deg); }
+.diligence-details .risk-list { padding-top:8px; }
+@supports (interpolate-size:allow-keywords) {
+ .diligence-details { interpolate-size:allow-keywords; }
+ .diligence-details::details-content { block-size:0; overflow:clip; transition:block-size 180ms ease-out, content-visibility 180ms allow-discrete; }
+ .diligence-details[open]::details-content { block-size:auto; }
+}
+@media(max-width:760px) {
+ .diligence-counts { gap:10px; }
+ .diligence-counts dt { font-size:13px; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .diligence-details::details-content,.diligence-details>summary svg { transition:none; }
+}

@@ -4,7 +4,7 @@ import { buildLocalPreviewScan, normalizeAiScan, validateScanRequest } from "../
 import { syntheticManufacturingFixture, syntheticManufacturingUrl } from "./fixtures";
 
 const listingText =
-  "Established HVAC services company with $1.2M revenue and $240k SDE. Owner handles sales. Asking price is $850,000.";
+  "Fictional Birch Climate is synthetic HVAC test data with $1.098M revenue and $183k SDE. A fictional owner handles sales. Asking price is $915,000.";
 
 describe("scan validation", () => {
   it("rejects short listings", () => {
@@ -16,14 +16,14 @@ describe("scan validation", () => {
     const result = validateScanRequest({
       listingText,
       corrections: {
-        askingPrice: " $850,000 ",
+        askingPrice: " $915,000 ",
         oversized: "x".repeat(700)
       }
     });
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.value.corrections?.askingPrice).toBe("$850,000");
+      expect(result.value.corrections?.askingPrice).toBe("$915,000");
       expect(result.value.corrections?.oversized.length).toBe(500);
     }
   });
@@ -32,26 +32,26 @@ describe("scan validation", () => {
     const scan = normalizeAiScan(
       {
         overview: {
-          businessName: { value: "Apex HVAC", source: "seller_claim", excerpts: ["Apex HVAC"] }
+          businessName: { value: "Fictional Birch Climate", source: "seller_claim", excerpts: ["Fictional Birch Climate"] }
         },
         financials: {
-          askingPrice: { amount: 850000, raw: "$850,000", source: "seller_claim", excerpts: ["Asking price is $850,000."] },
-          annualRevenue: { amount: 1200000, raw: "$1.2M", source: "seller_claim", excerpts: ["$1.2M revenue"] },
-          sde: { amount: 240000, raw: "$240k SDE", source: "seller_claim", excerpts: ["$240k SDE"] },
+          askingPrice: { amount: 915000, raw: "$915,000", source: "seller_claim", excerpts: ["Asking price is $915,000."] },
+          annualRevenue: { amount: 1098000, raw: "$1.098M", source: "seller_claim", excerpts: ["$1.098M revenue"] },
+          sde: { amount: 183000, raw: "$183k SDE", source: "seller_claim", excerpts: ["$183k SDE"] },
           ebitda: { amount: null, raw: null, source: "not_disclosed", excerpts: [] },
           advertisedCashFlow: {
-            amount: 240000,
-            raw: "$240k SDE",
+            amount: 183000,
+            raw: "$183k SDE",
             source: "seller_claim",
             sellerTerminology: "SDE",
-            excerpts: ["$240k SDE"]
+            excerpts: ["$183k SDE"]
           }
         },
         claritySummary: {
-          buying: "A local HVAC services company.",
+          buying: "A fictional HVAC services company used for offline tests.",
           attractive: "Revenue and SDE are disclosed.",
           kingdomHausFit: "Could fit a services platform.",
-          threats: "Owner handles sales.",
+          threats: "The fictional owner handles sales.",
           unansweredQuestions: "Customer concentration.",
           verifyBeforeProceeding: "Tax returns and customer mix."
         },
@@ -62,7 +62,7 @@ describe("scan validation", () => {
       "test-model"
     );
 
-    expect(scan.ratios.askingPriceToSde).toBe(3.54);
+    expect(scan.ratios.askingPriceToSde).toBe(5);
     expect(scan.ratios.askingPriceToEbitda).toBeNull();
     expect(scan.overview.location.value).toBeNull();
     expect(scan.riskChecks).toHaveLength(8);

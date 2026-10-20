@@ -8,6 +8,7 @@ import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
 import Search from "lucide-react/dist/esm/icons/search";
 import Send from "lucide-react/dist/esm/icons/send";
 import Sparkles from "lucide-react/dist/esm/icons/sparkles";
+import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import { downloadScanPdf } from "./pdf";
 import { createCashFlowAssumptions } from "./acquisitionCashFlow";
 import { useAcquisitionRecovery } from "./useAcquisitionRecovery";
@@ -530,7 +531,11 @@ export function ResultsScreen(props: {
           <SummaryQuestion label="Major risks" value={scan.claritySummary.majorRisks} />
         </div>
         <section className="intelligence-panel" aria-label="Optional AI-assisted analysis">
-          <div aria-hidden="true" />
+          <div className="khda-introduction">
+            <h3>KingdomHaus Deal Analyzer</h3>
+            <p className="khda-subtitle">A deeper look at the opportunity.</p>
+            <p>The Deal Analyzer helps connect disclosed financial information, ownership responsibilities, operating dependencies, and diligence questions behind a listing. It provides an additional analytical perspective beyond the initial rule-based screen.</p>
+          </div>
           <button className="primary-action intelligence-action" type="button" onClick={() => setPuterConfirmationOpen(true)} disabled={puterPoc.isLoading} aria-busy={puterPoc.isLoading}>
             {puterPoc.isLoading ? <RefreshCw aria-hidden="true" className="spin" /> : <Sparkles aria-hidden="true" />}
             {puterPoc.isLoading ? "Analyzing deal" : "KingdomHaus Intelligence™ — Analyze Deal"}
@@ -574,19 +579,7 @@ export function ResultsScreen(props: {
       </Panel>
 
       <Panel title="Due Diligence">
-        <div className="risk-list">
-          {buildDiligenceRows(scan).map((item) => (
-            <article className="risk-row" key={item.label}>
-              <div>
-                <h3>{item.label}</h3>
-                <span className="risk-kind">{item.requiresVerification ? "Franchise terms to verify" : statusContext(item.status)}</span>
-                <p>{publicReportText(diligenceReadout(item.label, item.explanation))}</p>
-                {item.verificationItems ? <ul className="simple-list">{item.verificationItems.map((point) => <li key={point}>{point}</li>)}</ul> : null}
-              </div>
-              <StatusBadge status={item.status} requiresVerification={item.requiresVerification} />
-            </article>
-          ))}
-        </div>
+        <DiligenceDetails key={scan.id} rows={buildDiligenceRows(scan)} />
       </Panel>
       <footer className="report-disclaimer">
         <p>{resultsDisclaimer}</p>
@@ -601,6 +594,41 @@ function buildCorrections(form: FormState) {
     correctionFields
       .map(([key]) => [key, form[key]])
       .filter(([key, value]) => typeof value === "string" && (key === "businessWebsite" || key === "streetAddress" || value.trim().length > 0))
+  );
+}
+
+type DiligenceRow = Pick<RiskCheck, "label" | "status" | "explanation" | "requiresVerification" | "verificationItems">;
+
+export function DiligenceDetails({ rows }: { rows: readonly DiligenceRow[] }) {
+  const priority = { watch: 0, unknown: 1, clear: 2 };
+  const orderedRows = [...rows].sort((a, b) => priority[a.status] - priority[b.status]);
+  const watchCount = rows.filter((item) => item.status === "watch").length;
+  const unknownCount = rows.filter((item) => item.status === "unknown").length;
+
+  return (
+    <div className="diligence-overview">
+      <dl className="diligence-counts">
+        <div><dt>Total checks</dt><dd>{rows.length}</dd></div>
+        <div><dt>Watch</dt><dd>{watchCount}</dd></div>
+        <div><dt>Unknown / missing information</dt><dd>{unknownCount}</dd></div>
+      </dl>
+      <details className="diligence-details">
+        <summary>View diligence details <ChevronDown aria-hidden="true" /></summary>
+        <div className="risk-list">
+          {orderedRows.map((item) => (
+            <article className="risk-row" key={item.label}>
+              <div>
+                <h3>{item.label}</h3>
+                <span className="risk-kind">{item.requiresVerification ? "Franchise terms to verify" : statusContext(item.status)}</span>
+                <p>{publicReportText(diligenceReadout(item.label, item.explanation))}</p>
+                {item.verificationItems ? <ul className="simple-list">{item.verificationItems.map((point) => <li key={point}>{point}</li>)}</ul> : null}
+              </div>
+              <StatusBadge status={item.status} requiresVerification={item.requiresVerification} />
+            </article>
+          ))}
+        </div>
+      </details>
+    </div>
   );
 }
 

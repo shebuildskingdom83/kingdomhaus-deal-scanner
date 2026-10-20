@@ -13,8 +13,8 @@ describe("PDF export", () => {
 
   it("creates a downloadable PDF for a scan", () => {
     const scan = buildLocalPreviewScan({
-      businessName: "Apex HVAC Services",
-      listingText: "Apex HVAC Services. Asking Price: $850,000. SDE: $240,000. Revenue: $1,200,000."
+      businessName: "Fictional Birch Climate",
+      listingText: "Fictional Birch Climate. Synthetic test data only. Asking Price: $915,000. SDE: $183,000. Revenue: $1,098,000."
     });
     const link = {
       href: "",
@@ -32,7 +32,7 @@ describe("PDF export", () => {
 
     expect(createElement).toHaveBeenCalledWith("a");
     expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
-    expect(link.download).toBe("apex-hvac-services.pdf");
+    expect(link.download).toBe("fictional-birch-climate.pdf");
     expect(link.click).toHaveBeenCalledOnce();
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:kingdomhaus-test");
   });
