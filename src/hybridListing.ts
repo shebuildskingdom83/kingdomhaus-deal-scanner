@@ -1,5 +1,7 @@
 import { extractListingDetails } from "./listingExtraction";
 import { parseMoney } from "./financial";
+import { structuredListingAddress } from "./listingAddress";
+import { safeBusinessWebsite } from "./safeExternalUrl";
 import { equivalentListingLocations, formatScrapedDescription } from "./listingPresentation";
 import type { DealScan, ListingPhotograph, ListingRetrieval, ScanRequest } from "./types";
 
@@ -40,6 +42,44 @@ function short(value: unknown, max = 250): string | null {
   return text && text.length <= max && !/\b(disclaimer|guarantee|privacy policy|terms of use)\b/i.test(text) ? text.replace(/\s+/g, " ") : null;
 }
 const key = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Marketplace references only; seller-website imagery is not a listing-photo fallback. */
+export function extractListingPhotographs(record: Record<string, unknown>, listingUrl: string): ListingPhotograph[] {
+  let sourceUrl: string;
+  try {
+    sourceUrl = approvedBizBuySellUrl(listingUrl);
+    if (typeof record.url === "string" && approvedBizBuySellUrl(record.url) !== sourceUrl) return [];
+  } catch { return []; }
+  const photographs = new Map<string, ListingPhotograph>();
+  const defaultCredit = "BizBuySell listing photograph; third-party rights retained.";
+  const text = (value: unknown) => {
+    const result = plain(value);
+    return result && result.length <= 2000 ? result : undefined;
+  };
+  for (const image of [...(Array.isArray(record.images) ? record.images : []), record.imageUrl]) {
+    const metadata = object(image);
+    const url = safeListingImage(typeof image === "string" ? image : metadata.url ?? metadata.src);
+    if (!url) continue;
+    if (metadata.sourceUrl !== undefined) {
+      try { if (approvedBizBuySellUrl(String(metadata.sourceUrl)) !== sourceUrl) continue; }
+      catch { continue; }
+    }
+    const alt = text(metadata.alt ?? metadata.altText);
+    const caption = text(metadata.caption);
+    const attribution = text(metadata.attribution ?? metadata.credit);
+    const previous = photographs.get(url);
+    if (!previous && photographs.size >= 20) continue;
+    photographs.set(url, {
+      url, sourceUrl,
+      attribution: previous && previous.attribution !== defaultCredit ? previous.attribution : attribution ?? defaultCredit,
+      ...(previous?.alt || alt ? { alt: previous?.alt ?? alt } : {}),
+      ...(previous?.caption || caption ? { caption: previous?.caption ?? caption } : {}),
+      ...(previous?.creditRequired !== undefined || typeof metadata.creditRequired === "boolean"
+        ? { creditRequired: previous?.creditRequired === true || metadata.creditRequired === true } : {})
+    });
+  }
+  return [...photographs.values()];
+}
 
 /** Reuse the listing parser by translating structured fields into its existing evidence labels. */
 export function reconcileApifyListing(record: Record<string, unknown>, input: ScanRequest): {
@@ -88,6 +128,13 @@ export function reconcileApifyListing(record: Record<string, unknown>, input: Sc
   const location = teaserLocation ?? extracted.overview.location.value ?? cleaned;
   if (location && cleaned && !equivalentListingLocations(location, cleaned, { city, state })) conflicts.push(`Location: source text (${location}) differs from Apify location (${cleaned}). Source text retained.`);
   add("Location", location, 140);
+  const address = structuredListingAddress(record);
+  if (address) add(address.embeddedMap ? "Embedded Map Address" : "Street Address", address.address, 250);
+  const sourceWebsite = safeBusinessWebsite(extracted.businessDetails.businessWebsite?.value);
+  const providerWebsite = safeBusinessWebsite(get("businessWebsite"));
+  if (sourceWebsite && providerWebsite && sourceWebsite !== providerWebsite) {
+    conflicts.push(`Business Website: source text (${sourceWebsite}) differs from provider value (${providerWebsite}). Source text retained; verify before relying on it.`);
+  }
   add("Industry", short(get("category", "industry")) ?? (/\bconcrete\b/i.test(description) ? "Concrete contracting services" : null));
   add("Established", short(get("establishedYear", "yearEstablished"), 20));
   const employees = short(get("employees", "employeeCount"), 100);
@@ -126,10 +173,9 @@ export function reconcileApifyListing(record: Record<string, unknown>, input: Sc
     add(label, numeric !== null ? `$${numeric}${suffix}` : `${short(value) ?? "Value not disclosed"}${suffix}`);
   }
   add("Building SF", short(get("buildingSize", "buildingSqFt"), 100));
-  const sourceUrl = input.listingUrl ?? "";
-  const images = [...(Array.isArray(record.images) ? record.images : []), record.imageUrl];
-  const photographs = [...new Set(images.map((image) => safeListingImage(typeof image === "object" ? object(image).url : image)).filter((image): image is string => Boolean(image)))].slice(0, 20)
-    .map((url): ListingPhotograph => ({ url, sourceUrl, attribution: "BizBuySell listing photograph, retrieved via Apify; third-party rights retained." }));
+  const photographs = extractListingPhotographs(record, input.listingUrl ?? "");
+  // Corrections remain authoritative in the existing parser, including an explicit clear.
+  add("Business Website", sourceWebsite ?? providerWebsite);
   const listingText = [title, ...lines, "Business Description", description || "Description not disclosed.", `Ad#: ${get("id", "listingId") ?? ""}`, ...rawLines].filter(Boolean).join("\n\n");
   if (listingText.length > 50_000) throw new Error("The retrieved listing exceeds the scanner's text limit. Paste the relevant listing text manually.");
   return { request: { ...input, listingText }, conflicts, photographs };

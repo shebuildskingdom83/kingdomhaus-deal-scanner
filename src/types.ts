@@ -33,6 +33,8 @@ export type AdditionalListingDetail = {
 };
 
 export type BusinessDetails = {
+  streetAddress?: TextFact;
+  businessWebsite?: TextFact;
   listingTitle: TextFact;
   source: TextFact;
   url: TextFact;
@@ -137,9 +139,11 @@ export type DealScan = {
   analysisMode: "ai" | "rule_based" | "local_preview";
   model: string | null;
   retrieval?: ListingRetrieval;
+  websiteProjectPhotographs?: WebsiteProjectPhotograph[];
 };
 
-export type ListingPhotograph = { url: string; sourceUrl: string; attribution: string };
+export type ListingPhotograph = { url: string; sourceUrl: string; attribution: string; creditRequired?: boolean; alt?: string; caption?: string };
+export type WebsiteProjectPhotograph = { url: string; sourceUrl: string; sourceType: "seller_website"; attribution: string; alt?: string; caption?: string };
 export type ListingRetrieval = {
   provider: "apify";
   actorId: string;

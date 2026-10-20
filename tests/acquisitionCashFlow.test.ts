@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { calculateAcquisitionCashFlow, createCashFlowAssumptions, formatCashFlowMoney, parseCashFlowInput, resolveCashFlowStartingPoint } from "../src/acquisitionCashFlow";
 import type { CashFlowAssumptions } from "../src/acquisitionCashFlow";
 import { buildLocalPreviewScan } from "../src/validation";
-import { bizBuySell2517190Fixture } from "./fixtures";
+import { syntheticManufacturingFixture } from "./fixtures";
 
 export const completeCashFlowAssumptions = (): CashFlowAssumptions => ({
   ...createCashFlowAssumptions(),
@@ -20,7 +20,7 @@ export const completeCashFlowAssumptions = (): CashFlowAssumptions => ({
 });
 
 function financials(corrections: Record<string, string> = { sde: "$240,000" }) {
-  return buildLocalPreviewScan({ listingText: bizBuySell2517190Fixture, corrections }).financials;
+  return buildLocalPreviewScan({ listingText: syntheticManufacturingFixture, corrections }).financials;
 }
 
 describe("post-acquisition cash flow", () => {

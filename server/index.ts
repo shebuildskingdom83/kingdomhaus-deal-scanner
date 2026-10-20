@@ -7,6 +7,7 @@ import { buildLocalPreviewScan, normalizeAiScan, validateScanRequest } from "../
 import type { ScanResponse, UrlFetchResponse } from "../src/types";
 import { ApifyListingService } from "./apify";
 import { attachRetrieval } from "../src/hybridListing";
+import { embeddedMapAddressFromHtml } from "../src/listingAddress";
 
 loadDotEnv();
 
@@ -170,7 +171,8 @@ async function fetchPublicListing(url: string, redirectCount = 0): Promise<UrlFe
 
     const limited = await readLimitedResponse(response, 1_200_000);
     const title = extractHtmlTitle(limited);
-    const listingText = htmlToText(limited);
+    const mapAddress = embeddedMapAddressFromHtml(limited);
+    const listingText = [htmlToText(limited), ...(mapAddress ? [`Embedded Map Address: ${mapAddress}`] : [])].join("\n\n");
     if (looksLikeAccessChallenge(listingText, title)) {
       throw new Error("The listing page returned a sign-in, access-check, or anti-bot challenge instead of public listing text. Paste the listing text to continue.");
     }

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { downloadScanPdf } from "../src/pdf";
 import { buildLocalPreviewScan } from "../src/validation";
-import { bizBuySell2517190Fixture } from "./fixtures";
+import { syntheticManufacturingFixture } from "./fixtures";
 import { createCashFlowAssumptions } from "../src/acquisitionCashFlow";
 import type { CashFlowAssumptions } from "../src/acquisitionCashFlow";
 
@@ -39,7 +39,7 @@ describe("PDF export", () => {
 
   it("includes corrected gross revenue and transaction split labels", async () => {
     const scan = buildLocalPreviewScan({
-      listingText: bizBuySell2517190Fixture
+      listingText: syntheticManufacturingFixture
     });
     const link = {
       href: "",
@@ -79,7 +79,7 @@ describe("PDF export", () => {
   });
 
   async function exportCashFlow(inputs?: CashFlowAssumptions, sde = "$240,000") {
-    const scan = buildLocalPreviewScan({ listingText: bizBuySell2517190Fixture, corrections: { sde } });
+    const scan = buildLocalPreviewScan({ listingText: syntheticManufacturingFixture, corrections: { sde } });
     let blob: Blob | undefined;
     vi.stubGlobal("document", { createElement: () => ({ click: vi.fn() }) });
     vi.stubGlobal("URL", { createObjectURL: (value: Blob) => { blob = value; return "blob:test"; }, revokeObjectURL: vi.fn() });

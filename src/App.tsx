@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import AlertCircle from "lucide-react/dist/esm/icons/alert-circle";
 import ArrowLeft from "lucide-react/dist/esm/icons/arrow-left";
@@ -10,29 +10,24 @@ import Send from "lucide-react/dist/esm/icons/send";
 import Sparkles from "lucide-react/dist/esm/icons/sparkles";
 import { downloadScanPdf } from "./pdf";
 import { createCashFlowAssumptions } from "./acquisitionCashFlow";
+import { useAcquisitionRecovery } from "./useAcquisitionRecovery";
+import { AcquisitionRecovery } from "./AcquisitionRecovery";
+import { businessComponentAmount, claritySellerDependence, diligenceReadout, publicReportText, resultsDisclaimer } from "./reporting";
+import { buildCurrentAcquisitionCsv, downloadCsv } from "./csv";
+import type { AcquisitionForm } from "./acquisitionRecord";
 import type { CashFlowAssumptions } from "./acquisitionCashFlow";
 import { PostAcquisitionCashFlow } from "./PostAcquisitionCashFlow";
 import { retrieveListing } from "./urlRetrieval";
-import { ListingPhotographs } from "./ListingPhotographs";
+import { BusinessWebsiteProjectGallery, ListingPhotographs } from "./ListingPhotographs";
+import { safeBusinessWebsite } from "./safeExternalUrl";
+import { preserveStreetAddressEvidence, resolvedStreetAddress } from "./listingAddress";
+import { preserveListingMedia } from "./listingMedia";
 import { formatMoney, formatRatio, isOptionalRealEstate, safeRatio } from "./financial";
 import { PuterResponseFormatError, runPuterDealClarityPoc } from "./puterPoc";
 import type { PuterDealClaritySummary } from "./puterPoc";
 import type { AssetDetail, DealScan, MoneyField, RealEstateDetail, RiskCheck, ScanResponse, TextFact } from "./types";
 
-export type FormState = {
-  businessName: string;
-  listingUrl: string;
-  listingText: string;
-  askingPrice: string;
-  businessAskingPrice: string;
-  annualRevenue: string;
-  sde: string;
-  ebitda: string;
-  advertisedCashFlow: string;
-  inventory: string;
-  ffe: string;
-  realEstate: string;
-};
+export type FormState = AcquisitionForm;
 
 const initialForm: FormState = {
   businessName: "",
@@ -51,6 +46,8 @@ const initialForm: FormState = {
 
 const correctionFields = [
   ["businessName", "Business name"],
+  ["businessWebsite", "Business Website"],
+  ["streetAddress", "Street address"],
   ["askingPrice", "Total asking price"],
   ["businessAskingPrice", "Business component price"],
   ["annualRevenue", "Gross Annual Revenue"],
@@ -63,8 +60,12 @@ const correctionFields = [
 ] as const;
 
 export function App() {
-  const [form, setForm] = useState<FormState>(initialForm);
-  const [scan, setScan] = useState<DealScan | null>(null);
+  const recovery = useAcquisitionRecovery(initialForm);
+  const { form, scan, cashFlow } = recovery.work;
+  const setForm = (value: FormState | ((current: FormState) => FormState)) => recovery.setWork(current => ({
+    ...current, form: typeof value === "function" ? value(current.form) : value
+  }));
+  const setScan = (value: DealScan | null) => recovery.setWork(current => ({ ...current, scan: value }));
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,6 +73,15 @@ export function App() {
   const retrievalId = useRef<string | undefined>(undefined);
   const retrievalBusy = useRef(false);
   const formRevision = useRef(0);
+  useEffect(() => {
+    if (!message || isLoading || isFetchingUrl) return;
+    const timer = window.setTimeout(() => setMessage(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [message, isLoading, isFetchingUrl]);
+  useEffect(() => {
+    retrievalId.current = undefined;
+    formRevision.current += 1;
+  }, [recovery.generation]);
 
   async function submitScan(overrides?: Partial<FormState>) {
     const nextForm = { ...form, ...overrides };
@@ -101,7 +111,7 @@ export function App() {
         setErrors(payload.details?.length ? payload.details : [payload.error]);
         return;
       }
-      setScan(payload.scan);
+      setScan(preserveStreetAddressEvidence(preserveListingMedia(payload.scan, scan), scan));
       setMessage("Scan complete.");
     } catch {
       setErrors(["Scan failed. Check that the local API server is running and try again."]);
@@ -127,14 +137,14 @@ export function App() {
       const payload = await retrieveListing(form.listingUrl, { confirm: (notice) => window.confirm(notice), progress: setMessage });
       if (!payload) return;
       if (revision !== formRevision.current) {
-        setMessage("Retrieval completed, but your edited listing was kept. Scan your pasted text or review the existing run in Apify.");
+        setMessage("Listing retrieved. Your edited text was kept.");
         return;
       }
       retrievalId.current = payload.retrievalId;
       const nextForm = {
         ...form,
         businessName: form.businessName || (payload.retrievalId ? "" : payload.title) || "",
-        listingUrl: payload.finalUrl,
+        listingUrl: form.listingUrl.trim(),
         listingText: payload.listingText
       };
       setForm(nextForm);
@@ -159,6 +169,7 @@ export function App() {
   if (scan) {
     return (
       <ResultsScreen
+        key={recovery.generation + ":" + scan.id}
         scan={scan}
         form={form}
         message={message}
@@ -166,7 +177,7 @@ export function App() {
         isLoading={isLoading}
         isFetchingUrl={isFetchingUrl}
         onBack={() => {
-          setScan(null);
+          recovery.newScan();
           setMessage(null);
           setErrors([]);
         }}
@@ -174,6 +185,9 @@ export function App() {
         onFieldChange={updateForm}
         onRefresh={submitScan}
         onScanFromUrl={scanFromUrl}
+        cashFlowAssumptions={cashFlow}
+        onCashFlowChange={value => recovery.setWork(current => ({ ...current, cashFlow: value }))}
+        recoveryControls={<AcquisitionRecovery recovery={recovery} busy={isLoading || isFetchingUrl} />}
       />
     );
   }
@@ -217,6 +231,10 @@ export function App() {
                 autoComplete="organization"
               />
             </label>
+            <label>
+              <span>Business Website (optional)</span>
+              <input type="url" value={form.businessWebsite ?? ""} onChange={event => updateForm("businessWebsite", event.target.value)} placeholder="https://business.example.com/" />
+            </label>
           </div>
 
           <div className="scan-card">
@@ -256,6 +274,7 @@ export function App() {
           </button>
         </form>
       </section>
+      <AcquisitionRecovery recovery={recovery} busy={isLoading || isFetchingUrl} />
     </main>
   );
 }
@@ -272,13 +291,19 @@ export function ResultsScreen(props: {
   onFieldChange: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   onRefresh: () => void;
   onScanFromUrl: () => void;
+  cashFlowAssumptions?: CashFlowAssumptions;
+  onCashFlowChange?: (value: CashFlowAssumptions) => void;
+  recoveryControls?: ReactNode;
 }) {
   const { scan } = props;
-  const [cashFlowAssumptions, setCashFlowAssumptions] = useState(createCashFlowAssumptions);
+  const [localAssumptions, setLocalAssumptions] = useState(createCashFlowAssumptions);
+  const cashFlowAssumptions = props.cashFlowAssumptions ?? localAssumptions;
+  const setCashFlowAssumptions = props.onCashFlowChange ?? setLocalAssumptions;
   const optionalRealEstate = isOptionalRealEstate(scan.financials.realEstate);
   const optionalRealEstateAmount = optionalRealEstate ? scan.financials.realEstate.value.amount : null;
   const requiredAdditionalCosts = scan.financials.knownAdditionalAcquisitionCosts.amount;
-  const businessPriceAmount = scan.financials.businessAskingPrice.amount ?? scan.financials.askingPrice.amount;
+  const businessPriceAmount = businessComponentAmount(scan.financials);
+  const sdeLabel = scan.financials.sde.amount === null ? "SDE" : scan.financials.sde.source === "user_correction" ? "SDE (user correction)" : "Seller-reported SDE";
   const acquisitionCapitalWithoutOptionalRealEstate =
     scan.financials.askingPrice.amount === null
       ? null
@@ -307,6 +332,23 @@ export function ResultsScreen(props: {
     error: null
   });
   const [puterConfirmationOpen, setPuterConfirmationOpen] = useState(false);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!exportNotice) return;
+    const timer = window.setTimeout(() => setExportNotice(null), 8000);
+    return () => window.clearTimeout(timer);
+  }, [exportNotice]);
+  function exportCurrentCsv() {
+    setExportError(null);
+    try {
+      downloadCsv(buildCurrentAcquisitionCsv(scan, cashFlowAssumptions), "kingdomhaus-current-acquisition.csv");
+      setExportNotice("CSV exported.");
+    } catch {
+      setExportNotice(null);
+      setExportError("CSV export could not complete. Your analysis is unchanged.");
+    }
+  }
 
   async function runPuterPoc() {
     setPuterConfirmationOpen(false);
@@ -324,10 +366,8 @@ export function ResultsScreen(props: {
         summary: null,
         error:
           error instanceof PuterResponseFormatError
-            ? "Puter did not return structured analysis. No deal facts were changed."
-            : error instanceof Error
-              ? error.message
-            : "Puter analysis failed. Try again after checking your Puter sign-in.",
+            ? "The analysis response was incomplete. No deal facts were changed."
+            : "Analysis could not be completed. Check your external AI account sign-in before trying again.",
       });
     }
   }
@@ -338,7 +378,7 @@ export function ResultsScreen(props: {
 
       <section className="results-header executive-header" id="report-top">
         <div className="executive-copy">
-          <button className="ghost-button" type="button" onClick={props.onBack}>
+          <button className="ghost-button" type="button" onClick={props.onBack} disabled={props.isLoading || props.isFetchingUrl}>
             <ArrowLeft aria-hidden="true" />
             New scan
           </button>
@@ -368,25 +408,23 @@ export function ResultsScreen(props: {
       <section className="result-hero financial-kpis" aria-label="Financial snapshot">
         <Metric label="Total asking price" value={formatMoney(scan.financials.askingPrice.amount)} detail="Advertised transaction price" />
         <Metric label="Gross Annual Revenue" value={formatMoney(scan.financials.annualRevenue.amount)} detail="Seller-reported gross revenue" />
-        <Metric label="SDE" value={formatMoney(scan.financials.sde.amount)} detail="Seller discretionary earnings" />
+        <Metric label={sdeLabel} value={formatMoney(scan.financials.sde.amount)} detail="Not independently verified" />
         <Metric label="EBITDA" value={formatMoney(scan.financials.ebitda.amount)} detail="Reported EBITDA" />
         <Metric label={primaryCashFlowRatio.label} value={primaryCashFlowRatio.value} detail="Preliminary multiple" />
       </section>
 
-      <Feedback message={props.message} errors={props.errors} />
+      <Feedback message={exportNotice ?? props.message} errors={exportError ? [...props.errors, exportError] : props.errors} />
 
-      {scan.analysisMode !== "ai" ? (
-        <div className="provider-status" role="status">
-          <AlertCircle aria-hidden="true" />
-          <span>Rule-based scan. AI analysis is opt-in and only runs when requested.</span>
-        </div>
-      ) : null}
 
       <div className="report-toolbar">
         <section className="action-row" aria-label="Result actions">
           <button type="button" onClick={() => props.onDownload(cashFlowAssumptions)}>
             <Download aria-hidden="true" />
             Download PDF
+          </button>
+          <button type="button" onClick={exportCurrentCsv}>
+            <Download aria-hidden="true" />
+            Export CSV
           </button>
           <button type="button" disabled aria-disabled="true">
             <Send aria-hidden="true" />
@@ -395,16 +433,21 @@ export function ResultsScreen(props: {
         </section>
       </div>
 
+      {props.recoveryControls}
+
       <Panel title="Business Profile">
         {scan.retrieval ? <ListingPhotographs photographs={scan.retrieval.photographs} /> : null}
+        <BusinessWebsiteProjectGallery scan={scan} />
         <dl className="detail-grid profile-grid">
+          <BusinessWebsite fact={scan.businessDetails.businessWebsite} />
+          <SourceListing url={scan.listingUrl ?? scan.businessDetails.url.value} />
           {isDistinctText(scan.businessDetails.listingTitle.value, scan.overview.businessName.value) ? (
             <Fact label="Listing title" fact={scan.businessDetails.listingTitle} />
           ) : null}
-          <LocationFacts location={scan.overview.location} />
+          <LocationFacts location={scan.overview.location} streetAddress={resolvedStreetAddress(scan)} />
           <Fact label="Industry" fact={scan.overview.industry} />
           <Fact label="Services" fact={scan.overview.services} wide />
-          <Fact label="Business model" fact={scan.overview.revenueModel} />
+          {isDistinctText(scan.overview.revenueModel.value, scan.overview.industry.value) && isDistinctText(scan.overview.revenueModel.value, scan.overview.services.value) ? <Fact label="Business model" fact={scan.overview.revenueModel} /> : null}
           {scan.overview.customerSegments ? <Fact label="Customer segments" fact={scan.overview.customerSegments} /> : null}
           <Fact label="Year established" fact={scan.overview.yearEstablished} />
           <Fact label="Years operating" fact={scan.overview.yearsOperating} />
@@ -412,10 +455,13 @@ export function ResultsScreen(props: {
           <Fact label="Reason for sale" fact={scan.overview.reasonForSale} />
           <Fact label="Owner involvement" fact={scan.overview.ownerInvolvement} wide />
           <Fact label="Seller transition and training" fact={scan.businessDetails.sellerSupportTraining} wide />
-          <Fact label="Business description" fact={scan.businessDetails.fullDescription} wide preserveLineBreaks />
           <Fact label="Facilities" fact={scan.businessDetails.facilities} wide />
           <Fact label="Growth opportunities" fact={scan.businessDetails.growthOpportunities} wide />
         </dl>
+        <details className="business-details">
+          <summary>Complete business description</summary>
+          <dl><Fact label="Business description" fact={scan.businessDetails.fullDescription} wide preserveLineBreaks /></dl>
+        </details>
         <details className="business-details">
           <summary>Other available listing information</summary>
           <Fact label="Competition" fact={scan.businessDetails.competition} wide />
@@ -427,7 +473,7 @@ export function ResultsScreen(props: {
               .map((detail) => (
                 <details key={`${detail.label}-${detail.value.slice(0, 20)}`} className="source-line">
                   <summary>{detail.label}</summary>
-                  <p>{detail.value}</p>
+                  <p>{publicReportText(detail.value)}</p>
                 </details>
               ))}
           </div>
@@ -439,13 +485,12 @@ export function ResultsScreen(props: {
           <MoneyFact label="Total asking price" field={scan.financials.askingPrice} />
           <MoneyFact label="Business component price" field={scan.financials.businessAskingPrice} />
           <MoneyFact label="Gross Annual Revenue" field={scan.financials.annualRevenue} />
-          <MoneyFact label="SDE" field={scan.financials.sde} />
+          <MoneyFact label={sdeLabel} field={scan.financials.sde} />
           <MoneyFact label="EBITDA" field={scan.financials.ebitda} />
           <MoneyFact
             label={`Advertised cash flow${scan.financials.advertisedCashFlow.sellerTerminology ? `: ${scan.financials.advertisedCashFlow.sellerTerminology}` : ""}`}
             field={scan.financials.advertisedCashFlow}
           />
-          <Fact label="Included assets" fact={scan.overview.includedAssets} wide />
           <AssetFact label="Inventory" asset={scan.financials.inventory} />
           <AssetFact label="FF&E" asset={scan.financials.ffe} />
           <RealEstateFact realEstate={scan.financials.realEstate} optional={optionalRealEstate} />
@@ -458,7 +503,7 @@ export function ResultsScreen(props: {
           <Ratio label="SDE margin" value={formatPercent(scan.ratios.sdeToRevenue)} />
         </div>
         <div className="capital-strip" aria-label="Acquisition capital scenarios">
-          <Metric label="Business price only" value={formatMoney(businessPriceAmount)} detail="Business component before included real estate" />
+          <Metric label="Disclosed business component" value={formatMoney(businessPriceAmount)} detail="Not inferred from combined pricing" />
           <Metric label="Price + required costs" value={formatMoney(acquisitionCapitalWithoutOptionalRealEstate)} detail="Adds required excluded assets" />
           <Metric label={optionalRealEstate ? "With optional real estate" : "Combined transaction price"} value={formatMoney(acquisitionCapitalWithOptionalRealEstate)} detail={optionalRealEstate ? "Shown separately when optional" : "Included real estate is not added again"} />
           <Metric label="Unknown costs" value="Verify" detail="Working capital, debt, and liens" />
@@ -474,22 +519,17 @@ export function ResultsScreen(props: {
 
       <Panel title="Deal Clarity" className="clarity-panel" id="deal-clarity">
         <div className="analysis-source">
-          <span>{scan.analysisMode === "ai" ? "OpenAI-assisted assessment" : "Rule-based assessment"}</span>
-          {puterPoc.summary ? <span>Puter-assisted assessment available below</span> : null}
-        </div>
-        <div className="clarity-lede">
-          <h3>Executive readout</h3>
-          <p>{scan.decision.explanation}</p>
+          <span>{scan.analysisMode === "ai" ? "AI-assisted assessment" : "Rule-based assessment"}</span>
         </div>
         <div className="summary-grid">
           <SummaryQuestion label="Strategic fit" value={scan.claritySummary.strategicFit} />
           <SummaryQuestion label="Attractive characteristics" value={scan.claritySummary.attractiveCharacteristics} />
-          <SummaryQuestion label="Seller dependence" value={scan.claritySummary.sellerDependence} />
+          <SummaryQuestion label="Seller dependence" value={claritySellerDependence(scan)} />
           <SummaryQuestion label="Equipment continuity" value={scan.claritySummary.equipmentContinuity} />
           <SummaryQuestion label="Financial questions" value={scan.claritySummary.financialQuestions} />
           <SummaryQuestion label="Major risks" value={scan.claritySummary.majorRisks} />
         </div>
-        <section className="intelligence-panel" aria-label="Puter-assisted analysis">
+        <section className="intelligence-panel" aria-label="Optional AI-assisted analysis">
           <div aria-hidden="true" />
           <button className="primary-action intelligence-action" type="button" onClick={() => setPuterConfirmationOpen(true)} disabled={puterPoc.isLoading} aria-busy={puterPoc.isLoading}>
             {puterPoc.isLoading ? <RefreshCw aria-hidden="true" className="spin" /> : <Sparkles aria-hidden="true" />}
@@ -498,9 +538,9 @@ export function ResultsScreen(props: {
         </section>
         {puterConfirmationOpen ? (
           <div className="ai-confirmation" aria-live="polite">
-            <p>Puter may require sign-in. Usage can count against your Puter allowance or incur charges under your Puter account.</p>
+            <p>This optional analysis uses an external AI service. Sign-in may be required. Usage may consume your allowance or incur charges on that account. Continue only if you accept those charges.</p>
             <div className="confirmation-actions">
-              <button type="button" onClick={runPuterPoc}>Continue with Puter</button>
+              <button type="button" onClick={runPuterPoc}>Confirm and analyze</button>
               <button type="button" onClick={() => setPuterConfirmationOpen(false)}>Cancel</button>
             </div>
           </div>
@@ -510,7 +550,7 @@ export function ResultsScreen(props: {
             <div className="error-message" role="alert">
               <AlertCircle aria-hidden="true" />
               <div>
-                <strong>Puter analysis did not complete</strong>
+                <strong>Analysis did not complete</strong>
                 <p>{puterPoc.error}</p>
               </div>
             </div>
@@ -518,7 +558,7 @@ export function ResultsScreen(props: {
           {puterPoc.summary ? (
             <div className="puter-summary">
               <div className="analysis-source">
-                <span>Puter-assisted assessment</span>
+                <span>Optional AI assessment - not verified evidence</span>
               </div>
               <div className="summary-grid">
                 <SummaryQuestion label="Strategic fit" value={puterPoc.summary.strategicFit} />
@@ -540,7 +580,7 @@ export function ResultsScreen(props: {
               <div>
                 <h3>{item.label}</h3>
                 <span className="risk-kind">{item.requiresVerification ? "Franchise terms to verify" : statusContext(item.status)}</span>
-                <p>{item.explanation}</p>
+                <p>{publicReportText(diligenceReadout(item.label, item.explanation))}</p>
                 {item.verificationItems ? <ul className="simple-list">{item.verificationItems.map((point) => <li key={point}>{point}</li>)}</ul> : null}
               </div>
               <StatusBadge status={item.status} requiresVerification={item.requiresVerification} />
@@ -548,7 +588,10 @@ export function ResultsScreen(props: {
           ))}
         </div>
       </Panel>
-
+      <footer className="report-disclaimer">
+        <p>{resultsDisclaimer}</p>
+        <details><summary>About this preliminary screen</summary><p>Keep Reading is a screening recommendation, not acquisition approval. Confirm source documents, ownership, transfer requirements, operating responsibilities, and financial assumptions with qualified advisers. Hypothetical savings and estimated cash remaining are not guaranteed distributions.</p></details>
+      </footer>
     </main>
   );
 }
@@ -557,7 +600,7 @@ function buildCorrections(form: FormState) {
   return Object.fromEntries(
     correctionFields
       .map(([key]) => [key, form[key]])
-      .filter(([, value]) => value.trim().length > 0)
+      .filter(([key, value]) => typeof value === "string" && (key === "businessWebsite" || key === "streetAddress" || value.trim().length > 0))
   );
 }
 
@@ -675,11 +718,9 @@ function AppHeader(_: { activeView: "Scan" | "Report" }) {
   return (
     <header className="app-header" aria-label="Application header">
       <div className="brand-lockup">
-        <div className="topbar-mark" aria-hidden="true">
-          KH
-        </div>
+        <img className="brand-logo" src="/kingdomhaus-logo.webp" alt="KingdomHaus logo" width="112" height="84" />
         <div>
-          <p className="eyebrow">KingdomHaus Corporation</p>
+          <p className="eyebrow">KingdomHaus Intelligence</p>
           <h1>Deal Scanner</h1>
         </div>
       </div>
@@ -704,7 +745,7 @@ function CorrectionAccordion(props: {
         {correctionFields.map(([key, label]) => (
           <label key={key}>
             <span>{label}</span>
-            <input value={props.form[key] || correctionValue(props.scan, key)} onChange={(event) => props.onFieldChange(key, event.target.value)} />
+            <input type={key === "businessWebsite" ? "url" : "text"} value={["businessWebsite", "streetAddress"].includes(key) ? props.form[key] ?? correctionValue(props.scan, key) : props.form[key] || correctionValue(props.scan, key)} onChange={(event) => props.onFieldChange(key, event.target.value)} />
           </label>
         ))}
       </div>
@@ -739,9 +780,23 @@ function Fact({ label, fact, wide = false, preserveLineBreaks = false }: { label
   return (
     <div className={`fact ${wide ? "wide" : ""}`}>
       <dt>{label}</dt>
-      <dd style={preserveLineBreaks ? { whiteSpace: "pre-line" } : undefined}>{fact.value ?? "Not Disclosed"}</dd>
+      <dd style={preserveLineBreaks ? { whiteSpace: "pre-line" } : undefined}>{publicReportText(fact.value ?? "Not Disclosed")}</dd>
     </div>
   );
+}
+
+function BusinessWebsite({ fact }: { fact?: TextFact }) {
+  const url = safeBusinessWebsite(fact?.value);
+  return <div className="fact"><dt>Business Website</dt><dd>{url
+    ? <a href={url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">Visit Website<span className="sr-only"> (opens in a new tab)</span></a>
+    : "Not Disclosed"}</dd></div>;
+}
+
+function SourceListing({ url }: { url: string | null }) {
+  const safe = safeBusinessWebsite(url);
+  return <div className="fact"><dt>Source Listing</dt><dd>{safe
+    ? <a href={safe} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" aria-label="View Original Listing (opens in a new tab)">View Original Listing</a>
+    : "Not Disclosed"}</dd></div>;
 }
 
 function MoneyFact({ label, field }: { label: string; field: MoneyField }) {
@@ -780,13 +835,13 @@ function RealEstateFact({ realEstate, optional = false }: { realEstate: RealEsta
   );
 }
 
-function LocationFacts({ location }: { location: TextFact }) {
+function LocationFacts({ location, streetAddress }: { location: TextFact; streetAddress?: TextFact }) {
   return (
     <>
       <Fact label="Market / city-state" fact={location} />
       <div className="fact">
         <dt>Street address</dt>
-        <dd>{location.value ? "Not disclosed in listing" : "Not disclosed"}</dd>
+        <dd>{streetAddress?.value ?? (location.value ? "Not disclosed in listing" : "Not disclosed")}</dd>
       </div>
     </>
   );
@@ -805,7 +860,7 @@ function SummaryQuestion({ label, value }: { label: string; value: string }) {
   return (
     <article className="summary-question">
       <h3>{label}</h3>
-      <p>{value}</p>
+      <p>{publicReportText(value)}</p>
     </article>
   );
 }
@@ -839,6 +894,8 @@ function isSafeDisplayTitle(value: string) {
 function correctionValue(scan: DealScan, key: (typeof correctionFields)[number][0]) {
   const values: Record<(typeof correctionFields)[number][0], string> = {
     businessName: scan.overview.businessName.value ?? scan.businessDetails.listingTitle.value ?? "",
+    businessWebsite: scan.businessDetails.businessWebsite?.value ?? "",
+    streetAddress: resolvedStreetAddress(scan).value ?? "",
     askingPrice: scan.financials.askingPrice.raw ?? formatMoneyForCorrection(scan.financials.askingPrice.amount),
     businessAskingPrice: scan.financials.businessAskingPrice.raw ?? formatMoneyForCorrection(scan.financials.businessAskingPrice.amount),
     annualRevenue: scan.financials.annualRevenue.raw ?? formatMoneyForCorrection(scan.financials.annualRevenue.amount),

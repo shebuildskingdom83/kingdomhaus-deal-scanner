@@ -1,5 +1,6 @@
 import { approvedBizBuySellUrl } from "./hybridListing";
 import type { UrlFetchResponse } from "./types";
+import { retrievalFailure } from "./reporting";
 
 type Ready = Extract<UrlFetchResponse, { listingText: string }>;
 export async function retrieveListing(url: string, options: {
@@ -14,21 +15,21 @@ export async function retrieveListing(url: string, options: {
   if (isBizBuySell) {
     approvedBizBuySellUrl(url);
     const config = await (await fetcher("/api/retrieval-config")).json();
-    if (!config.enabled) throw new Error(config.message || "Apify is not configured. Paste the listing details below.");
-    if (!options.confirm(`Retrieve one BizBuySell listing through Apify? Charges apply. This run has a $${Number(config.maxChargeUsd).toFixed(2)} spending limit. Check for any earlier unfinished run before continuing. No automatic paid retries.`)) return null;
+    if (!config.enabled) throw new Error("Automatic retrieval is not configured. Paste the listing details below.");
+    if (!options.confirm("Retrieve this listing using an external, chargeable service? Usage will be billed to the configured retrieval account. A server-side spending limit applies. Check for unfinished retrievals before continuing. No automatic paid retries.")) return null;
   }
-  options.progress(isBizBuySell ? "Starting one Apify retrieval..." : "Retrieving public listing text...");
+  options.progress("Retrieving listing information...");
   let payload = await (await fetcher("/api/fetch-listing", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url, ...(isBizBuySell ? { paidScanConfirmed: true, requestId: crypto.randomUUID() } : {}) })
   })).json() as UrlFetchResponse;
   const deadline = Date.now() + 660_000;
   while (payload.ok && "status" in payload) {
-    options.progress(`${payload.message} Spending limit: $${payload.maxChargeUsd.toFixed(2)}.${payload.usageUsd === null ? " Usage not yet available." : ` Reported usage: $${payload.usageUsd.toFixed(4)} (preliminary).`}`);
-    if (Date.now() > deadline) throw new Error("Retrieval is taking longer than expected. Check the existing run in Apify before starting another paid scan. You can paste listing text to continue.");
+    options.progress("Retrieving listing information...");
+    if (Date.now() > deadline) throw new Error("Retrieval is taking longer than expected. Check the existing retrieval with your administrator before starting another chargeable scan. Paste listing text to continue.");
     await (options.wait?.() ?? new Promise((resolve) => setTimeout(resolve, 2000)));
     payload = await (await fetcher(`/api/listing-retrieval/${payload.jobId}`)).json() as UrlFetchResponse;
   }
-  if (!payload.ok) throw new Error(payload.error);
-  return payload;
+  if (!payload.ok) throw new Error(retrievalFailure(payload.error));
+  return { ...payload, message: "Listing retrieved successfully." };
 }

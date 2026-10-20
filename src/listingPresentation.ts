@@ -4,6 +4,7 @@ const states = new Map(stateNames.split("|").flatMap((entry) => {
   return [[code.toLowerCase(), code], [name.toLowerCase(), code]];
 }));
 const normalized = (value: string) => value.trim().toLowerCase().replace(/\s+/g, " ");
+export const listingStateCode = (value: string): string | null => states.get(normalized(value)) ?? null;
 function place(value: string) {
   const parts = value.replace(/^(?:(?:business\s+)?location\s*:?\s*)+/i, "").split(",").map(normalized);
   if (parts.length !== 2 || !parts[0] || !states.has(parts[1])) return null;

@@ -2,14 +2,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ResultsScreen, type FormState } from "../src/App";
 import { buildLocalPreviewScan } from "../src/validation";
-import { bizBuySell2517190Fixture, bizBuySell2517190Url } from "./fixtures";
+import { syntheticManufacturingFixture, syntheticManufacturingUrl } from "./fixtures";
 import { PostAcquisitionCashFlow } from "../src/PostAcquisitionCashFlow";
 import { createCashFlowAssumptions } from "../src/acquisitionCashFlow";
 
 const emptyForm: FormState = {
   businessName: "",
-  listingUrl: bizBuySell2517190Url,
-  listingText: bizBuySell2517190Fixture,
+  listingUrl: syntheticManufacturingUrl,
+  listingText: syntheticManufacturingFixture,
   askingPrice: "",
   businessAskingPrice: "",
   annualRevenue: "",
@@ -22,10 +22,10 @@ const emptyForm: FormState = {
 };
 
 describe("results dashboard rendering", () => {
-  it("renders normalized 2517190 SDE, asset inclusion, margin, and multiples", () => {
+  it("renders normalized 9900101 SDE, asset inclusion, margin, and multiples", () => {
     const scan = buildLocalPreviewScan({
-      listingUrl: bizBuySell2517190Url,
-      listingText: bizBuySell2517190Fixture
+      listingUrl: syntheticManufacturingUrl,
+      listingText: syntheticManufacturingFixture
     });
 
     const html = renderToStaticMarkup(
@@ -60,7 +60,7 @@ describe("results dashboard rendering", () => {
   });
 
   it("renders unknown assumptions as incomplete and clearly labels the starting metric", () => {
-    const scan = buildLocalPreviewScan({ listingText: bizBuySell2517190Fixture });
+    const scan = buildLocalPreviewScan({ listingText: syntheticManufacturingFixture });
     const html = renderToStaticMarkup(<PostAcquisitionCashFlow financials={scan.financials}
       assumptions={createCashFlowAssumptions()} onChange={() => undefined} />);
     expect(html).toContain('value="227261"');
@@ -72,7 +72,7 @@ describe("results dashboard rendering", () => {
   });
 
   it("renders negative estimates and an EBITDA normalization requirement", () => {
-    const scan = buildLocalPreviewScan({ listingText: bizBuySell2517190Fixture, corrections: { ebitda: "$200,000" } });
+    const scan = buildLocalPreviewScan({ listingText: syntheticManufacturingFixture, corrections: { ebitda: "$200,000" } });
     const assumptions = { ...createCashFlowAssumptions(), startingMetric: "ebitda" as const, normalizationAdjustment: "0", normalizationNotes: "Buyer cash bridge estimate.",
       debtService: "180000", managementCosts: "60000", capexReserve: "12000", workingCapitalReserve: "12000", currentReviewed: true };
     const html = renderToStaticMarkup(<PostAcquisitionCashFlow financials={scan.financials}

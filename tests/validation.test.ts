@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { safeRatio } from "../src/financial";
 import { buildLocalPreviewScan, normalizeAiScan, validateScanRequest } from "../src/validation";
-import { bizBuySell2517190Fixture, bizBuySell2517190Url } from "./fixtures";
+import { syntheticManufacturingFixture, syntheticManufacturingUrl } from "./fixtures";
 
 const listingText =
   "Established HVAC services company with $1.2M revenue and $240k SDE. Owner handles sales. Asking price is $850,000.";
@@ -68,12 +68,12 @@ describe("scan validation", () => {
     expect(scan.riskChecks).toHaveLength(8);
   });
 
-  it("retains BizBuySell 2534015 fields and treats excluded assets correctly", () => {
+  it("retains BizBuySell 9900104 fields and treats excluded assets correctly", () => {
     const bizBuySellFixture = `
-Well Established, Highly Profitable Printing and Packaging Company
+Synthetic Printing and Packaging Workshop
 Business Description
-This print and packaging company is strategically located in an area with a high concentration of aerospace and defense companies, who are heavily reliant on the company's unique products and services. It has a long and well-established history, and is known for its high quality products.
-Ad#:2534015
+This fictional print workshop serves imaginary aerospace and defense companies. It is synthetic regression data, not a seller statement.
+Ad#:9900104
 Business Location
 Torrance, CA
 Asking Price:
@@ -112,20 +112,20 @@ The seller is willing to provide training and transition support.
 Reason for Selling:
 Retirement
 Broker:
-Sunbelt Business Brokers of Pasadena
+Example Brokerage Group
 `;
 
     const scan = buildLocalPreviewScan({
-      businessName: "Well Established, Highly Profitable Printing and Packaging Company",
+      businessName: "Synthetic Printing and Packaging Workshop",
       listingUrl:
-        "https://www.bizbuysell.com/business-opportunity/well-established-highly-profitable-printing-and-packaging-company/2534015/",
+        "https://www.bizbuysell.com/business-opportunity/synthetic-printing-fixture/9900104/",
       listingText: bizBuySellFixture
     });
 
     expect(scan.analysisMode).toBe("rule_based");
-    expect(scan.businessDetails.adNumber.value).toBe("2534015");
+    expect(scan.businessDetails.adNumber.value).toBe("9900104");
     expect(scan.businessDetails.fullDescription.value).toContain("aerospace and defense companies");
-    expect(scan.businessDetails.fullDescription.value).not.toContain("Ad#:2534015");
+    expect(scan.businessDetails.fullDescription.value).not.toContain("Ad#:9900104");
     expect(scan.businessDetails.facilities.value).toContain("large building");
     expect(scan.overview.yearsOperating.value).toBe("Approximately 40 years");
     expect(scan.financials.askingPrice.amount).toBe(3500000);
@@ -145,7 +145,7 @@ Sunbelt Business Brokers of Pasadena
     expect(scan.ratios.askingPriceToSde).toBeNull();
     expect(scan.ratios.askingPriceToEbitda).toBeNull();
     expect(safeRatio(scan.financials.askingPrice.amount, scan.financials.advertisedCashFlow.amount)).toBe(5.22);
-    expect(scan.sellerClaims).not.toContain("2534015");
+    expect(scan.sellerClaims).not.toContain("9900104");
     expect(scan.businessDetails.additionalDetails.at(-1)?.label).toBe("Complete source text");
   });
 
@@ -266,16 +266,16 @@ The owner is retiring and willing to assist with transition.
     expect(scan.model).toBeNull();
   });
 
-  it("extracts BizBuySell 2517190 transaction pricing without double-counting included assets", () => {
+  it("extracts BizBuySell 9900101 transaction pricing without double-counting included assets", () => {
     const scan = buildLocalPreviewScan({
-      listingUrl: bizBuySell2517190Url,
-      listingText: bizBuySell2517190Fixture
+      listingUrl: syntheticManufacturingUrl,
+      listingText: syntheticManufacturingFixture
     });
     const intro =
-      "This Central North Carolina manufacturer makes industrial equipment accessories for a specialized niche that has found its market.";
+      "This fictional Central North Carolina manufacturer makes industrial equipment accessories for offline regression coverage.";
 
-    expect(scan.businessDetails.listingTitle.value).toBe("A Niche That Found Its Market - Manufacturer With Real Estate");
-    expect(scan.businessDetails.adNumber.value).toBe("2517190");
+    expect(scan.businessDetails.listingTitle.value).toBe("Synthetic Manufacturing Workshop With Property");
+    expect(scan.businessDetails.adNumber.value).toBe("9900101");
     expect(scan.overview.location.value).toBe("Central North Carolina");
     expect(scan.overview.industry.value).toBe("Specialty manufacturing / industrial equipment accessories");
     expect(scan.overview.services.value).toBe("Industrial equipment accessories");
@@ -285,7 +285,7 @@ The owner is retiring and willing to assist with transition.
     expect(scan.businessDetails.fullDescription.value).not.toMatch(/PRICE INCLUDES BUSINESS & REAL ESTATE/i);
     expect(scan.businessDetails.fullDescription.value).not.toMatch(/The transaction includes the business/i);
     expect(scan.businessDetails.fullDescription.value?.split(intro)).toHaveLength(2);
-    expect(scan.businessDetails.brokerInformation.value).toBe("Carolina Business Advisors");
+    expect(scan.businessDetails.brokerInformation.value).toBe("Synthetic Business Advisors");
     expect(scan.financials.askingPrice.amount).toBe(1240000);
     expect(scan.financials.businessAskingPrice.amount).toBe(565000);
     expect(scan.financials.realEstate.value.amount).toBe(675000);
@@ -320,8 +320,8 @@ The owner is retiring and willing to assist with transition.
         }
       },
       {
-        listingUrl: bizBuySell2517190Url,
-        listingText: bizBuySell2517190Fixture
+        listingUrl: syntheticManufacturingUrl,
+        listingText: syntheticManufacturingFixture
       },
       "test-model"
     );

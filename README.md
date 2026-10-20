@@ -58,13 +58,13 @@ Use the existing **Scan from URL** action for a single BizBuySell business-oppor
 
 The local API retains the run and dataset IDs, uses bearer authentication server-side, and returns only a local retrieval ID. It fetches the dataset created by that run, validates the listing identity, reconciles structured values with source text, then uses the existing deterministic analysis. Optional Puter remains available on the resulting report. Manual/OpenAI scans retain their existing path. Generic `cashFlow` remains advertised cash flow; SDE requires a source SDE field or explicit SDE label. User corrections take priority. Conflicts remain visible as diligence gaps and in PDF output.
 
-Photographs are referenced from approved BizBuySell/LoopNet image hosts, with attribution and failure fallbacks. They are not downloaded, embedded in PDFs, or republished. The raw dataset row is retained in report state for provenance, and is included when the existing local-save workflow saves the scan.
+Photographs are referenced from approved BizBuySell/LoopNet image hosts, with attribution and failure fallbacks. They are not downloaded, embedded in PDFs, or republished. Raw dataset rows remain in the live retrieval state, but durable saves/backups omit raw rows and image binaries while preserving approved image URLs and metadata. Normalized evidence, listing text, source metadata and conflicts are preserved. See [SAVE-RECOVERY.md](SAVE-RECOVERY.md).
 
 If retrieval fails, the URL and pasted text stay intact. Paste listing text and use **Scan business**. Editing the URL or text detaches the retrieval session. Request deduplication lasts for the current API process (maximum 100 sessions); before restarting the server or starting another run after an uncertain network failure, check the Apify console for an existing paid run. Closing the browser does not abort a run; its spending and time limits still apply. The API remains bound to loopback; paid requests are accepted only from the existing localhost:5173 / 127.0.0.1:5173 application origins. It is not a remotely authenticated service.
 
 Official references: [Actor input and output](https://apify.com/abotapi/bizbuysell-scraper), [Run Actor](https://docs.apify.com/api/v2/actors-runs-post), [Get run](https://docs.apify.com/api/v2/actor-run-get), [Dataset items](https://docs.apify.com/api/v2/dataset-items-get).
 
-Regression fixtures `tests/apify-painting.json` and `tests/apify-concrete.json` preserve the original JSON exports `dataset_bizbuysell-scraper_2026-10-17_16-01-30-093.json` and `dataset_bizbuysell-scraper_2026-10-17_16-16-40-576.json` supplied from local Downloads. Both exports label earnings only as `cashFlow`, so the exported numbers remain advertised cash flow and SDE stays undisclosed unless explicit SDE evidence or a user correction is supplied. The test suite also covers modified fixtures for missing values, conflicts, malformed fields, and provider failures; every Apify HTTP request in tests is mocked. No live paid scan was executed during implementation.
+Regression fixtures `tests/apify-painting.json` and `tests/apify-concrete.json` are synthetic provider-shaped examples, not original seller exports. Their generic `cashFlow` values remain advertised cash flow, and SDE stays undisclosed unless explicit SDE evidence or a user correction is supplied. The test suite covers missing values, conflicts, malformed fields and provider failures; every Apify HTTP request in tests is mocked. Arithmetic regression constants do not represent a real acquisition. Minimal public photo-allowlist compatibility references remain only where required by unchanged source-protection rules. See [tests/README.md](tests/README.md). No live paid scan is needed to verify the project.
 
 Files changed for Hybrid Listing Intelligence V1:
 - Server: `server/index.ts`, new `server/apify.ts`.
@@ -85,7 +85,15 @@ This is not a replacement for the current server-side OpenAI integration. Puter 
 
 Expand **Post-Acquisition Cash Flow** inside Financial Intelligence to enter annual USD assumptions for Current Operations and a separate KingdomHaus Improvements scenario. Source-linked earnings follow applied listing corrections; editing the starting amount creates a user estimate. Unknown costs stay blank, and estimates require explicit inputs (including 0 where appropriate) and review of owner replacement and overlapping expenses.
 
-EBITDA and advertised cash flow require normalization notes. Savings default to proposed, and one-time implementation costs affect only the first-year result. Calculator assumptions stay in the current report session and do not change listing facts or trigger AI. PDF downloads include complete scenarios and their assumptions; incomplete estimates are omitted.
+EBITDA and advertised cash flow require normalization notes. Savings default to proposed, and one-time implementation costs affect only the first-year result. Calculator assumptions do not change listing facts or trigger AI. Save acquisition, recovery drafts and versioned JSON backups retain both scenarios. PDF downloads include complete scenarios and their assumptions; incomplete estimates are omitted.
+
+## Acquisition Saving and Recovery
+
+Use **Save acquisition** and **Saved scans** in the existing intake/report workflow. **Saved scans > Manage Backups** contains **Export Backup** and **Import Backup**. Explicit updates, renames, deletions and duplicate imports require confirmation. An independent recovery draft restores open work after refresh. Records retain corrected financial evidence and both cash-flow scenarios; Puter results remain session-only.
+
+**Export CSV**, beside Download PDF, reports the current acquisition and scenario assumptions. **Saved scans > Export saved scans CSV** reports the saved library. Missing amounts stay blank; spreadsheet formula-like text is literalized. CSV is a confidential summary, not a complete backup, and CSV import is intentionally unsupported. See [SAVE-RECOVERY.md](SAVE-RECOVERY.md).
+
+This is unencrypted browser-local storage, not authenticated cloud storage or synchronization. Keep confidential JSON backups securely; they are the cross-computer recovery path. Capacity errors and incompatible legacy data do not silently erase existing records. See [SAVE-RECOVERY.md](SAVE-RECOVERY.md) for formats, limits, migration, retention and Phase 3B boundaries.
 
 ## Scripts
 

@@ -8,7 +8,7 @@ describe("financial helpers", () => {
     expect(parseMoney("220k")).toBe(220000);
     expect(parseMoney("$240,000 SDE")).toBe(240000);
     expect(parseMoney("Not Disclosed")).toBeNull();
-    expect(parseMoney("Ad#:2534015")).toBeNull();
+    expect(parseMoney("Ad#:9900104")).toBeNull();
     expect(parseMoney("10 employees")).toBeNull();
     expect(parseMoney("40,000 sq ft")).toBeNull();
   });

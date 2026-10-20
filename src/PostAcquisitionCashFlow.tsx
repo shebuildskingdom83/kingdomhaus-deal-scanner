@@ -71,7 +71,7 @@ export function PostAcquisitionCashFlow({ financials, assumptions, onChange, own
                 "Confirm what this cash flow measure includes, including existing debt service, owner pay, and capital costs."}
           </p>
           {ownerInvolvement?.value ? (
-            <p className="section-note"><strong>Seller-reported owner role:</strong> {ownerInvolvement.value} Verify post-close coverage and enter only incremental replacement pay below. No salary or KingdomHaus staff availability is assumed.</p>
+            <p className="section-note">Review the seller-reported owner role in Business Profile. Enter only incremental replacement pay below; no salary or available KingdomHaus staffing is assumed.</p>
           ) : null}
           <div className="cash-flow-inputs">
             {currentCashFlowFields.map((field) => (

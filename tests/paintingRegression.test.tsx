@@ -5,28 +5,28 @@ import { calculateAcquisitionCashFlow, createCashFlowAssumptions } from "../src/
 import { downloadScanPdf } from "../src/pdf";
 import { buildPuterPrompt } from "../src/puterPoc";
 import { buildLocalPreviewScan, normalizeAiScan } from "../src/validation";
-import { painting2505993Fixture, painting2505993Url } from "./painting2505993Fixture";
+import { syntheticPaintingFixture, syntheticPaintingUrl } from "./syntheticPaintingFixture";
 
-const request = { listingText: painting2505993Fixture, listingUrl: painting2505993Url };
+const request = { listingText: syntheticPaintingFixture, listingUrl: syntheticPaintingUrl };
 const scanListing = () => buildLocalPreviewScan(request);
 const currentAssumptions = () => ({
   ...createCashFlowAssumptions(), normalizationAdjustment: "0", debtService: "12000", managementCosts: "30000",
   capexReserve: "3000", workingCapitalReserve: "2400", currentReviewed: true
 });
 const form: FormState = {
-  businessName: "", listingUrl: painting2505993Url, listingText: painting2505993Fixture, askingPrice: "", businessAskingPrice: "",
+  businessName: "", listingUrl: syntheticPaintingUrl, listingText: syntheticPaintingFixture, askingPrice: "", businessAskingPrice: "",
   annualRevenue: "", sde: "", ebitda: "", advertisedCashFlow: "", inventory: "", ffe: "", realEstate: ""
 };
 
-describe("Painting Co. 2505993 regression", () => {
+describe("synthetic painting franchise regression", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("extracts source financials and clean operational facts from the full listing body", () => {
     const scan = scanListing();
-    expect(scan.businessDetails.listingTitle.value).toBe("Painting Co. $350K+ Sales, Exclusive Area (Unbroker Exclusive)");
-    expect(scan.businessDetails.brokerInformation.value).toBe("Cory Hogan \u2014 Unbroker");
+    expect(scan.businessDetails.listingTitle.value).toBe("Synthetic Painting Franchise - Offline Fixture");
+    expect(scan.businessDetails.brokerInformation.value).toBe("Morgan Example \u2014 Example Brokerage");
     expect(scan.businessDetails.brokerInformation.source).toBe("seller_claim");
-    expect(scan.businessDetails.brokerInformation.excerpts.join(" ")).toContain("Cory Hogan Unbroker");
+    expect(scan.businessDetails.brokerInformation.excerpts.join(" ")).toContain("Morgan Example Example Brokerage");
     expect(scan.overview.location.value).toBe("Mecklenburg County, NC");
     expect(scan.overview.industry.value).toBe("Painting services");
     expect(scan.overview.services.value).toBe("Residential and commercial painting franchise services");
@@ -35,7 +35,7 @@ describe("Painting Co. 2505993 regression", () => {
     expect(scan.overview.employeeCount.value).toBe("1 Employee");
     expect(scan.overview.ownerInvolvement.value).toContain("sales, scheduling, and customer communication");
     expect(scan.overview.ownerInvolvement.value).toContain("40-hour workweek");
-    expect(scan.overview.ownerInvolvement.value).not.toMatch(/retirement|24-hour|Disclaimer|Unbroker/);
+    expect(scan.overview.ownerInvolvement.value).not.toMatch(/retirement|24-hour|Disclaimer|Example Brokerage/);
     expect(scan.businessDetails.sellerSupportTraining.value).toContain("Seller will provide training on daily operations");
     expect(scan.businessDetails.sellerSupportTraining.value).toContain("Ongoing franchisor support");
     expect(scan.businessDetails.sellerSupportTraining.value).not.toMatch(/Reason for Selling|planned retirement|Franchise:/);
@@ -45,7 +45,7 @@ describe("Painting Co. 2505993 regression", () => {
     expect(scan.businessDetails.growthOpportunities.value).toContain("reduce owner involvement in job execution.");
     expect(scan.businessDetails.growthOpportunities.value).toContain("under new motivated ownership.");
     expect(scan.businessDetails.fullDescription.value).not.toMatch(/Disclaimer|does not guarantee|Prospective buyers/);
-    expect(scan.listingText).toBe(painting2505993Fixture);
+    expect(scan.listingText).toBe(syntheticPaintingFixture);
     expect(scan.businessDetails.additionalDetails.find((item) => item.label === "Complete source text")?.value).toContain("does not guarantee");
     expect(scan.financials.askingPrice.amount).toBe(137500);
     expect(scan.financials.annualRevenue.amount).toBe(352757);
@@ -75,19 +75,19 @@ describe("Painting Co. 2505993 regression", () => {
   });
 
   it.each([
-    ["Cory Hogan Unbroker", "Cory Hogan \u2014 Unbroker"],
-    ["Cory Hogan\nUnbroker", "Cory Hogan \u2014 Unbroker"]
+    ["Morgan Example Example Brokerage", "Morgan Example \u2014 Example Brokerage"],
+    ["Morgan Example\nExample Brokerage", "Morgan Example \u2014 Example Brokerage"]
   ])("recognizes the attribution format %s", (attribution, expected) => {
-    const scan = buildLocalPreviewScan({ ...request, listingText: painting2505993Fixture.replace("Cory Hogan Unbroker", attribution) });
+    const scan = buildLocalPreviewScan({ ...request, listingText: syntheticPaintingFixture.replace("Morgan Example Example Brokerage", attribution) });
     expect(scan.businessDetails.brokerInformation.value).toBe(expected);
   });
 
   it("extracts explicit broker name/company labels and rejects a disclaimer posing as broker data", () => {
-    const valid = buildLocalPreviewScan({ listingText: "Service Company\nBusiness Description\nResidential services business.\nBroker Name: Cory Hogan\nBroker Company: Unbroker" });
-    expect(valid.businessDetails.brokerInformation.value).toBe("Cory Hogan \u2014 Unbroker");
-    const missing = buildLocalPreviewScan({ ...request, listingText: painting2505993Fixture.split("Business Listed By:")[0] });
+    const valid = buildLocalPreviewScan({ listingText: "Service Company\nBusiness Description\nResidential services business.\nBroker Name: Morgan Example\nBroker Company: Example Brokerage" });
+    expect(valid.businessDetails.brokerInformation.value).toBe("Morgan Example \u2014 Example Brokerage");
+    const missing = buildLocalPreviewScan({ ...request, listingText: syntheticPaintingFixture.split("Business Listed By:")[0] });
     expect(missing.businessDetails.brokerInformation).toMatchObject({ value: null, source: "not_disclosed" });
-    const disclaimer = buildLocalPreviewScan({ listingText: "Service Company\nBusiness Description\nIndependent service business.\nBroker: Unbroker LLC does not guarantee the accuracy of seller information." });
+    const disclaimer = buildLocalPreviewScan({ listingText: "Service Company\nBusiness Description\nIndependent service business.\nBroker: Example Brokerage LLC does not guarantee the accuracy of seller information." });
     expect(disclaimer.businessDetails.brokerInformation.value).toBeNull();
   });
 
@@ -107,11 +107,11 @@ describe("Painting Co. 2505993 regression", () => {
 
   it("preserves deterministic source facts and franchise verification in AI-normalized reports", () => {
     const scan = normalizeAiScan({
-      overview: { ownerInvolvement: { value: "Absentee ownership", source: "ai_inference" }, services: { value: painting2505993Fixture, source: "ai_inference" } },
-      businessDetails: { brokerInformation: { value: "Unbroker LLC does not guarantee accuracy", source: "seller_claim" } },
+      overview: { ownerInvolvement: { value: "Absentee ownership", source: "ai_inference" }, services: { value: syntheticPaintingFixture, source: "ai_inference" } },
+      businessDetails: { brokerInformation: { value: "Example Brokerage LLC does not guarantee accuracy", source: "seller_claim" } },
       riskChecks: [{ label: "Owner dependence", status: "clear", explanation: "No replacement required." }]
     }, request, "test-model");
-    expect(scan.businessDetails.brokerInformation.value).toBe("Cory Hogan \u2014 Unbroker");
+    expect(scan.businessDetails.brokerInformation.value).toBe("Morgan Example \u2014 Example Brokerage");
     expect(scan.overview.services.value).toBe("Residential and commercial painting franchise services");
     expect(scan.overview.ownerInvolvement.value).toContain("40-hour workweek");
     expect(scan.riskChecks.find((risk) => risk.label === "Owner dependence")?.status).toBe("watch");
@@ -120,7 +120,7 @@ describe("Painting Co. 2505993 regression", () => {
     const prompt = buildPuterPrompt(scan);
     expect(prompt).toContain('"sde":66392');
     expect(prompt).toContain('"ebitda":null');
-    expect(prompt).toContain("Cory Hogan");
+    expect(prompt).toContain("Morgan Example");
   });
 
   it("does not promote generic cash flow because its context mentions historical SDE", () => {
@@ -144,17 +144,17 @@ describe("Painting Co. 2505993 regression", () => {
     const html = renderToStaticMarkup(<ResultsScreen scan={scanListing()} form={form} message={null} errors={[]}
       isLoading={false} isFetchingUrl={false} onBack={() => undefined} onDownload={() => undefined}
       onFieldChange={() => undefined} onRefresh={() => undefined} onScanFromUrl={() => undefined} />);
-    expect(html).toContain("Cory Hogan \u2014 Unbroker");
+    expect(html).toContain("Morgan Example \u2014 Example Brokerage");
     expect(html).toContain("Business model");
     expect(html).toContain("85% Residential / 15% Commercial Revenue Mix");
     expect(html).toContain("Requires Verification");
     expect(html).toContain("Franchisor approval of ownership transfers");
     expect(html).toContain("shared management across KingdomHaus companies");
-    expect(html).toContain("Seller-reported owner role:");
+    expect(html).toContain("Review the seller-reported owner role in Business Profile.");
     expect(html).toContain("40-hour workweek");
     expect(html).toContain("Principal and interest");
     expect(html).toContain("Estimates are not guaranteed cash distributions.");
-    expect(html).not.toContain("Unbroker LLC does not guarantee");
+    expect(html).not.toContain("Example Brokerage LLC does not guarantee");
     expect(html).toContain("KingdomHaus Intelligence");
     expect(html).toContain("Send to Notion");
   });
@@ -184,12 +184,12 @@ describe("Painting Co. 2505993 regression", () => {
     downloadScanPdf(scanListing(), currentAssumptions());
     const pdf = (await blob!.text()).replace(/\\([()])/g, "$1");
     const text = [...pdf.matchAll(/^\((.*)\) Tj$/gm)].map((match) => match[1]).join(" ");
-    expect(text).toContain("Broker: Cory Hogan");
-    expect(text).toContain("Unbroker");
+    expect(text).toContain("Broker: Morgan Example");
+    expect(text).toContain("Example Brokerage");
     expect(text).toContain("40-hour workweek");
     expect(text).toContain("Franchise requirements: REQUIRES VERIFICATION");
     expect(text).toContain("Franchise transfer fees");
-    expect(text).toContain("within the defined service area. Previous years");
+    expect(text).toContain("Historical SDE is not supplied; fictional results may change");
     expect(text).toContain("Estimated annual cash remaining: $18,992");
     expect(text).toContain("Estimates are not guaranteed cash distributions.");
   });

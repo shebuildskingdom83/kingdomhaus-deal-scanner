@@ -35,3 +35,20 @@ Desktop.ini
 *.bak
 *.swp
 *.swo
+
+# Confidential acquisition exports are data backups, not application source
+kingdomhaus-acquisition-*.json
+kingdomhaus-stored-recovery*.json
+kingdomhaus-current-acquisition*.csv
+kingdomhaus-saved-acquisitions*.csv
+*.pdf
+*.csv
+/exports/
+/backups/
+/PRIVATE-*
+
+# Local research and browser-verification notes can identify saved acquisitions
+/FINAL-CORRECTIONS.md
+/QUALITY-VERIFICATION.md
+/SOURCE-ADDRESS-VERIFICATION.md
+/WEBSITE-PROJECT-RECOVERY.md

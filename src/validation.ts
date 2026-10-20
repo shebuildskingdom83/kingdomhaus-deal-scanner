@@ -1,5 +1,6 @@
 import { calculateRatios, parseMoney } from "./financial";
 import { extractListingDetails } from "./listingExtraction";
+import { safeBusinessWebsite } from "./safeExternalUrl";
 import type {
   AssetDetail,
   BusinessDetails,
@@ -70,6 +71,9 @@ export function validateScanRequest(input: unknown): { ok: true; value: ScanRequ
         )
       : undefined;
 
+  if (corrections?.businessWebsite && !safeBusinessWebsite(corrections.businessWebsite)) {
+    errors.push("Enter a public HTTPS Business Website URL.");
+  }
   if (errors.length > 0) {
     return { ok: false, errors };
   }
@@ -263,7 +267,7 @@ function normalizeBusinessDetails(value: unknown, fallback: BusinessDetails): Bu
   return {
     listingTitle: normalizeTextFact(object.listingTitle).value ? normalizeTextFact(object.listingTitle) : fallback.listingTitle,
     source: normalizeTextFact(object.source).value ? normalizeTextFact(object.source) : fallback.source,
-    url: normalizeTextFact(object.url).value ? normalizeTextFact(object.url) : fallback.url,
+    url: fallback.url,
     adNumber: normalizeTextFact(object.adNumber).value ? normalizeTextFact(object.adNumber) : fallback.adNumber,
     fullDescription: fallback.fullDescription,
     facilities: normalizeTextFact(object.facilities).value ? normalizeTextFact(object.facilities) : fallback.facilities,
@@ -279,6 +283,8 @@ function normalizeBusinessDetails(value: unknown, fallback: BusinessDetails): Bu
       ? normalizeTextFact(object.reasonForSelling)
       : fallback.reasonForSelling,
     brokerInformation: fallback.brokerInformation,
+    businessWebsite: fallback.businessWebsite,
+    streetAddress: fallback.streetAddress,
     additionalDetails: normalizeAdditionalDetails(object.additionalDetails, fallback.additionalDetails)
   };
 }

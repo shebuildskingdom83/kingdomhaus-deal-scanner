@@ -133,7 +133,7 @@ export function parsePuterSummaryFromText(text: string, responseKind = "text"): 
   const summary = Object.fromEntries(
     fields.map((field) => {
       const value = source[field];
-      return [field, typeof value === "string" && value.trim() ? value.trim() : "Not addressed by Puter response."];
+      return [field, typeof value === "string" && value.trim() ? value.trim() : "Not addressed by the analysis response."];
     })
   ) as PuterDealClaritySummary;
 

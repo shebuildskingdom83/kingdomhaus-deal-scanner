@@ -21,7 +21,7 @@ function scanRecord(record: Record<string, unknown>, corrections: Record<string,
   return attachRetrieval(buildLocalPreviewScan(mapped.request), { provider: "apify", actorId: APIFY_ACTOR_ID, sourceUrl: String(record.url), retrievedAt: "2026-10-17T20:00:00Z", rawRecord: record, usageUsd: 0.004, maxChargeUsd: 0.25, conflicts: mapped.conflicts, photographs: mapped.photographs });
 }
 
-describe("original Apify exports (local Downloads copies, no live retrieval)", () => {
+describe("synthetic provider-shaped listing samples (no live retrieval)", () => {
   it("retains Painting financials, county, broker-profile attribution, excluded equipment and original record", () => {
     const scan = scanRecord(painting);
     expect(scan.financials.askingPrice.amount).toBe(137500);
@@ -30,7 +30,7 @@ describe("original Apify exports (local Downloads copies, no live retrieval)", (
     expect(scan.financials.sde.amount).toBeNull();
     expect(scan.financials.ebitda.amount).toBeNull();
     expect(scan.overview.location.value).toBe("Mecklenburg County, NC");
-    expect(scan.businessDetails.brokerInformation.value).toBe("Cory Hogan — Unbroker");
+    expect(scan.businessDetails.brokerInformation.value).toBe("Morgan Example — Example Brokerage");
     expect(scan.businessDetails.brokerInformation.source).toBe("url_extract");
     expect(scan.businessDetails.brokerInformation.excerpts).toContain(painting.brokerProfileUrl);
     expect(scan.overview.employeeCount.value).toBe("1 Employee");
@@ -48,8 +48,8 @@ describe("original Apify exports (local Downloads copies, no live retrieval)", (
     expect(scan.financials.advertisedCashFlow.amount).toBe(158803);
     expect(scan.financials.sde.amount).toBeNull();
     expect(scan.overview.location.value).toBe("Weddington, NC");
-    expect(scan.businessDetails.brokerInformation.value).toBe("Allan Rodriguez");
-    expect(scan.businessDetails.fullDescription.value).toContain("fully operational Sam The Concrete Man");
+    expect(scan.businessDetails.brokerInformation.value).toBe("Taylor Sample");
+    expect(scan.businessDetails.fullDescription.value).toContain("fully operational Sample Concrete Franchise");
     expect(scan.businessDetails.fullDescription.value).not.toContain("7-star Google rating");
     expect(scan.overview.services.value).toContain("driveways");
     expect(scan.overview.industry.value).toContain("Concrete");
@@ -66,7 +66,8 @@ describe("original Apify exports (local Downloads copies, no live retrieval)", (
     expect(corrected.ratios.askingPriceToSde).toBe(2);
     expect(buildReportLines(corrected).join("\n")).toContain("SDE: $70,000");
     expect(buildPuterPrompt(corrected)).toContain("70000");
-    expect(buildReportLines(corrected).join("\n")).toContain("Retrieved via Apify");
+    expect(buildReportLines(corrected).join("\n")).toContain("Listing retrieved:");
+    expect(buildReportLines(corrected).join("\n")).not.toContain("Apify");
   });
   it("flags conflicts, preserves unknowns and rejects disclaimers as broker facts", () => {
     const scan = scanRecord({ ...concrete, fullDescription: "Business Location Location: Weddington, NC\nAsking Price: $400,000\nConcrete services business.", brokerName: "Disclaimer: Information is not guaranteed", brokerProfileUrl: null });
@@ -76,7 +77,7 @@ describe("original Apify exports (local Downloads copies, no live retrieval)", (
     expect(scan.businessDetails.brokerInformation.value).toBeNull();
     expect(scan.financials.inventory.value.amount).toBeNull();
     expect(scan.financials.inventory.includedStatus).toBe("unknown");
-    const missing = scanRecord({ id: "2500709", url: concrete.url, title: "Concrete business", cashFlow: 158803 });
+    const missing = scanRecord({ id: "9900103", url: concrete.url, title: "Concrete business", cashFlow: 158803 });
     expect(missing.overview.location.value).toBeNull();
     expect(missing.financials.sde.amount).toBeNull();
     expect(missing.retrieval?.photographs).toEqual([]);
@@ -87,10 +88,11 @@ describe("original Apify exports (local Downloads copies, no live retrieval)", (
     expect(html).toContain('loading="lazy"');
     expect(html).toContain('referrerPolicy="no-referrer"');
     expect(html).toContain("Listing photograph 1");
-    expect(html).toContain("BizBuySell via Apify");
+    expect(html).not.toContain("<figcaption>");
+    expect(html).not.toContain("Apify");
     for (const url of ["javascript:alert(1)", "http://images.bizbuysell.com/a.jpg", "https://127.0.0.1/a.jpg", "https://evil.example/a.jpg", "https://images.bizbuysell.com/a.jpg?token=secret"]) expect(safeListingImage(url)).toBeNull();
   });
-  it.each([{ record: painting, location: "Mecklenburg County, NC", broker: "Cory Hogan" }, { record: concrete, location: "Weddington, NC", broker: "Allan Rodriguez" }])("renders the final normalized dashboard from each export", ({ record, location, broker }) => {
+  it.each([{ record: painting, location: "Mecklenburg County, NC", broker: "Morgan Example" }, { record: concrete, location: "Weddington, NC", broker: "Taylor Sample" }])("renders the final normalized dashboard from each export", ({ record, location, broker }) => {
     const scan = scanRecord(record);
     const form: FormState = { businessName: "", listingUrl: record.url, listingText: scan.listingText, askingPrice: "", businessAskingPrice: "", annualRevenue: "", sde: "", ebitda: "", advertisedCashFlow: "", inventory: "", ffe: "", realEstate: "" };
     const html = renderToStaticMarkup(<ResultsScreen scan={scan} form={form} message={null} errors={[]} isLoading={false} isFetchingUrl={false}
@@ -150,7 +152,7 @@ describe("location equivalence and seller description formatting", () => {
     expect(JSON.stringify(painting)).toBe(original);
     expect(description).not.toMatch(/HIGHLIGHTSEstablished|201385%|MixOwner/);
   });
-  it.each([{ row: painting, asking: 137500, revenue: 352757, cashFlow: 66392, broker: "Cory Hogan — Unbroker" }, { row: concrete, asking: 425000, revenue: 1002483, cashFlow: 158803, broker: "Allan Rodriguez" }])("keeps export financials and broker facts unchanged", ({ row, asking, revenue, cashFlow, broker }) => {
+  it.each([{ row: painting, asking: 137500, revenue: 352757, cashFlow: 66392, broker: "Morgan Example — Example Brokerage" }, { row: concrete, asking: 425000, revenue: 1002483, cashFlow: 158803, broker: "Taylor Sample" }])("keeps export financials and broker facts unchanged", ({ row, asking, revenue, cashFlow, broker }) => {
     const scan = scanRecord(row);
     expect(scan.financials.askingPrice.amount).toBe(asking);
     expect(scan.financials.annualRevenue.amount).toBe(revenue);
@@ -167,15 +169,15 @@ describe("location equivalence and seller description formatting", () => {
     vi.stubGlobal("URL", { createObjectURL: (blob: Blob) => { blobs.push(blob); return "blob:test"; }, revokeObjectURL: vi.fn() });
     try {
       const lines = buildReportLines(scan);
-      expect(lines).toContain("Description: HIGHLIGHTS");
+      expect(lines).toContain("HIGHLIGHTS");
       expect(lines).toContain("Established 2013");
       expect(lines).toContain("85% Residential / 15% Commercial Revenue Mix");
       downloadScanPdf(scan);
       const pdf = await blobs[0].text();
-      expect(pdf).toContain("(Description: HIGHLIGHTS) Tj");
+      expect(pdf).toContain("(HIGHLIGHTS) Tj");
       expect(pdf).toContain("(Established 2013) Tj");
       expect(pdf).toContain("(85% Residential / 15% Commercial Revenue Mix) Tj");
-      expect(pdf).toContain("Broker: Cory Hogan");
+      expect(pdf).toContain("Broker: Morgan Example");
       expect(pdf).not.toContain("HIGHLIGHTSEstablished");
       expect(network).not.toHaveBeenCalled();
     } finally { vi.unstubAllGlobals(); network.mockRestore(); }
@@ -274,7 +276,8 @@ describe("existing URL action with manual fallback", () => {
     const result = await retrieveListing(painting.url, { fetcher, confirm: () => true, progress, wait: async () => {} });
     expect(result?.finalUrl).toBe(painting.url);
     expect(fetcher.mock.calls[2][1]?.method).toBeUndefined();
-    expect(progress).toHaveBeenCalledWith(expect.stringContaining("Spending limit"));
+    expect(progress).toHaveBeenCalledWith("Retrieving listing information...");
+    expect(JSON.stringify(progress.mock.calls)).not.toMatch(/Apify|Spending limit|usage|\$/i);
   });
   it("preserves friendly public-URL failures and allows the existing manual scan", async () => {
     const message = "This website doesn't allow automatic retrieval. Copy the listing details and paste them below to continue.";

@@ -7,7 +7,7 @@ import {
   PuterResponseFormatError
 } from "../src/puterPoc";
 import { buildLocalPreviewScan } from "../src/validation";
-import { bizBuySell2517190Fixture, bizBuySell2517190Url } from "./fixtures";
+import { syntheticManufacturingFixture, syntheticManufacturingUrl } from "./fixtures";
 
 describe("Puter POC helpers", () => {
   it("parses a fenced structured deal clarity summary", () => {
@@ -54,7 +54,7 @@ describe("Puter POC helpers", () => {
 
     expect(summary.strategicFit).toBe("Known fit statement.");
     expect(summary.attractiveCharacteristics).toBe("Known attractive statement.");
-    expect(summary.sellerDependence).toBe("Not addressed by Puter response.");
+    expect(summary.sellerDependence).toBe("Not addressed by the analysis response.");
   });
 
   it("classifies normalized empty text responses", () => {
@@ -104,8 +104,8 @@ describe("Puter POC helpers", () => {
 
   it("builds Puter input from corrected normalized listing data", () => {
     const scan = buildLocalPreviewScan({
-      listingUrl: bizBuySell2517190Url,
-      listingText: bizBuySell2517190Fixture
+      listingUrl: syntheticManufacturingUrl,
+      listingText: syntheticManufacturingFixture
     });
     const prompt = buildPuterPrompt(scan);
     const payload = JSON.parse(prompt.match(/\{[\s\S]*\}$/)?.[0] ?? "{}") as {

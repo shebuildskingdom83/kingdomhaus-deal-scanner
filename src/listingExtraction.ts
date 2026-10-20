@@ -1,4 +1,6 @@
 import { calculateKnownAdditionalCosts, isOptionalRealEstate, parseMoney } from "./financial";
+import { safeBusinessWebsite } from "./safeExternalUrl";
+import { streetAddressFact } from "./listingAddress";
 import type {
   AssetDetail,
   BusinessDetails,
@@ -33,6 +35,8 @@ type TransactionBreakdown = {
 };
 
 const knownLabels = [
+  "Street Address", "Business Address", "Embedded Map Address",
+  "Business Website",
   "Asking Price",
   "Total Asking Price",
   "Business Asking Price",
@@ -193,6 +197,13 @@ export function extractListingDetails(input: {
   };
 
   const businessDetails: BusinessDetails = {
+    streetAddress: streetAddressFact(text, input.listingUrl, input.corrections),
+    businessWebsite: textFact(
+      safeBusinessWebsite(Object.hasOwn(input.corrections ?? {}, "businessWebsite")
+        ? input.corrections?.businessWebsite
+        : text.match(/^\s*Business Website\s*:\s*(https:\/\/[^\s<>"']+)/im)?.[1]),
+      text, Object.hasOwn(input.corrections ?? {}, "businessWebsite") ? "user_correction" : "seller_claim"
+    ),
     listingTitle: textFact(title, text, input.businessName ? "user_correction" : "rule_based"),
     source: textFact(sourceName, text, input.listingUrl ? "url_extract" : "rule_based"),
     url: textFact(input.listingUrl ?? null, text, input.listingUrl ? "url_extract" : "not_disclosed"),
@@ -235,22 +246,26 @@ export function extractListingDetails(input: {
 }
 
 function assetFromText(text: string, labels: string[], override?: string): AssetDetail {
-  const raw = firstValue(override, ...labels.map((label) => extractLabelBlock(text, label)), extractAssetStatement(text, labels));
+  const statement = extractAssetStatement(text, labels);
+  const raw = firstValue(override, ...labels.map((label) => extractLabelBlock(text, label)), statement);
   const source = sourceForCorrection(override);
+  const status = inclusionFromText(raw);
   return {
     value: moneyFact(raw, text, source),
-    includedStatus: inclusionFromText(raw),
-    notes: textFact(raw, text, source)
+    includedStatus: status === "unknown" ? inclusionFromText(statement) : status,
+    notes: textFact(status === "unknown" ? statement ?? raw : raw, text, status === "unknown" && statement ? "seller_claim" : source)
   };
 }
 
 function realEstateFromText(text: string, override?: string, transactionBreakdown?: TransactionBreakdown | null): RealEstateDetail {
-  const raw = firstValue(override, transactionBreakdown?.realEstateRaw, extractLabelBlock(text, "Real Estate"), extractAssetStatement(text, ["Real Estate"]));
+  const statement = extractAssetStatement(text, ["Real Estate"]);
+  const raw = firstValue(override, transactionBreakdown?.realEstateRaw, extractLabelBlock(text, "Real Estate"), statement);
   const source = sourceForCorrection(override);
+  const status = inclusionFromText(raw);
   return {
     value: moneyFact(raw, text, source),
-    includedStatus: inclusionFromText(raw),
-    notes: textFact(raw, text, source),
+    includedStatus: status === "unknown" ? inclusionFromText(statement) : status,
+    notes: textFact(status === "unknown" ? statement ?? raw : raw, text, status === "unknown" && statement ? "seller_claim" : source),
     ownership: textFact(extractOwnership(raw), text),
     buildingSize: textFact(extractLabelValue(text, "Building SF"), text)
   };
@@ -351,6 +366,9 @@ function buildRiskChecks(input: {
       return risk(label, businessDetails.competition.value || businessDetails.growthOpportunities.value ? "unknown" : "unknown", "Customer concentration is not established by this rule-based scan; request customer revenue mix.", []);
     }
     if (label === "Licensing and credentials") {
+      if (/certified welding inspector|\bCWI\b/i.test(overview.ownerInvolvement.value ?? "")) {
+        return risk(label, "watch", "Seller reports an owner-held Certified Welding Inspector (CWI) credential. Verify which work requires it, credential ownership and transferability, and qualified post-close coverage. Do not assume the credential transfers or assign replacement compensation without evidence.", overview.ownerInvolvement.excerpts);
+      }
       return risk(label, "unknown", "Licensing and credential requirements are not reliably established from the retained listing text.", []);
     }
     if (label === "Supplier dependence") {
@@ -527,7 +545,7 @@ function findImmediateCapitalNeeds(inventory: AssetDetail, realEstate: RealEstat
 function inferOwnerInvolvement(text: string): string | null {
   const statements = text.split("\n").flatMap(splitIntoSentences).filter((sentence) =>
     /\bowner\b/i.test(sentence) &&
-    /\b(operated|operates|works?|handles?|responsibilities|sales|scheduling|hours?|workweek|day.to.day)\b/i.test(sentence) &&
+    /\b(operated|operates|works?|handles?|responsibilities|sales|scheduling|hours?|workweek|day.to.day|certified welding inspector|CWI)\b/i.test(sentence) &&
     !/\b(could|would|may|potential|new owner|buyer seeking|will provide|training|transition)\b/i.test(sentence)
   );
   const duties = statements.filter((sentence) => /\b(responsibilities|handles?|sales|scheduling|customer communication)\b/i.test(sentence));
@@ -536,7 +554,8 @@ function inferOwnerInvolvement(text: string): string | null {
     const hours = statements.find((sentence) => /\b(hours?|workweek)\b/i.test(sentence));
     if (hours) selected.push(hours);
   }
-  return uniqueStrings(selected).join(" ") || null;
+  const credentials = statements.filter(sentence => /certified welding inspector|\bCWI\b/i.test(sentence));
+  return uniqueStrings([...selected, ...credentials]).join(" ") || null;
 }
 
 function ownerDependenceSummary(owner: TextFact): string {
@@ -870,12 +889,18 @@ function findPattern(text: string, pattern: RegExp): string | null {
 function extractAssetStatement(text: string, labels: string[]): string | null {
   const escapedLabels = labels.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
   if (labels.some((label) => /ff&e|ffe|furniture/i.test(label))) {
+    escapedLabels.push("equipment");
     escapedLabels.push("furniture\\s*,?\\s*fixtures\\s*,?\\s*(?:and|&)\\s*equipment");
     const noEquipment = findSentence(text, [/\bno\s+(?:significant\s+)?equipment\b/i, /\bincluded\b/i]);
     if (noEquipment) return noEquipment;
   }
   const labelPattern = new RegExp(`\\b(${escapedLabels.join("|")})\\b`, "i");
-  return findSentence(text, [labelPattern, /\b(valued?|includes?|included|excluded|not included|asking price|separately|loan|lien)\b/i]);
+  const sentences = text.split(/\n+/).flatMap(splitIntoSentences);
+  return sentences.find(sentence =>
+    labelPattern.test(sentence) && /\b(includes?|included|excluded|not included|separately)\b/i.test(sentence)
+  ) ?? sentences.find(sentence =>
+    labelPattern.test(sentence) && /\b(valued?|asking price|loan|lien)\b/i.test(sentence)
+  ) ?? null;
 }
 
 function findSentence(text: string, patterns: RegExp[]): string | null {

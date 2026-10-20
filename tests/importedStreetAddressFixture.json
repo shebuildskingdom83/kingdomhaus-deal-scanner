@@ -1,0 +1,493 @@
+{
+  "format": "kingdomhaus-acquisition",
+  "schemaVersion": 1,
+  "exportedAt": "2025-01-01T00:00:00.000Z",
+  "record": {
+    "schemaVersion": 1,
+    "id": "11111111-1111-4111-8111-111111111111",
+    "name": "Fictional Cedar Workshop",
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z",
+    "revision": 3,
+    "origin": "imported",
+    "state": {
+      "scan": {
+        "id": "22222222-2222-4222-8222-222222222222",
+        "createdAt": "2025-01-01T00:00:00.000Z",
+        "listingUrl": "https://www.bizbuysell.com/business-opportunity/fictional-fixture-business-not-a-real-listing/9900001/",
+        "listingText": "Fictional Cedar Workshop - Synthetic Regression Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabrication services\nEmployees: 2 fictional employees\nFacilities: Synthetic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.\nAd#: 9900001",
+        "correctedFields": {
+          "businessName": "Fictional Cedar Workshop",
+          "businessWebsite": "https://example.com/synthetic-workshop/",
+          "streetAddress": "8420 Fictional Cedar Way, Example City, NC 28700"
+        },
+        "businessDetails": {
+          "streetAddress": {
+            "value": "8420 Fictional Cedar Way, Example City, NC 28700",
+            "source": "user_correction",
+            "excerpts": [
+              "Founder-supplied synthetic address correction: 8420 Fictional Cedar Way, Example City, NC 28700. Not independently verified.",
+              "Synthetic map observation: 8420 Fictional Cedar Way, Example City, North Carolina. No ZIP supplied by the simulated map.",
+              "Synthetic marketplace source: https://www.bizbuysell.com/business-opportunity/fictional-fixture-business-not-a-real-listing/9900001/",
+              "Synthetic seller website observation is consistent with the fictional correction; not independently verified.",
+              "Synthetic website source: https://example.com/synthetic-workshop/"
+            ]
+          },
+          "businessWebsite": {
+            "value": "https://example.com/synthetic-workshop/",
+            "source": "user_correction",
+            "excerpts": [
+              "https://example.com/synthetic-workshop/"
+            ]
+          },
+          "listingTitle": {
+            "value": "Fictional Cedar Workshop - Synthetic Regression Data",
+            "source": "rule_based",
+            "excerpts": [
+              "Fictional Cedar Workshop - Synthetic Regression Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabricat"
+            ]
+          },
+          "source": {
+            "value": "bizbuysell.com",
+            "source": "url_extract",
+            "excerpts": [
+              "bizbuysell.com"
+            ]
+          },
+          "url": {
+            "value": "https://www.bizbuysell.com/business-opportunity/fictional-fixture-business-not-a-real-listing/9900001/",
+            "source": "url_extract",
+            "excerpts": [
+              "https://www.bizbuysell.com/business-opportunity/fictional-fixture-business-not-a-real-listing/9900001/"
+            ]
+          },
+          "adNumber": {
+            "value": "9900001",
+            "source": "seller_claim",
+            "excerpts": [
+              "real seller, location, contact, photograph or acquisition is represented.\nAd#: 9900001"
+            ]
+          },
+          "fullDescription": {
+            "value": "Entirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.",
+            "source": "seller_claim",
+            "excerpts": [
+              "asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.\nAd#: 9900001"
+            ]
+          },
+          "facilities": {
+            "value": "Synthetic workshop with equipment included in the asking price.",
+            "source": "seller_claim",
+            "excerpts": [
+              "ry: Synthetic fabrication services\nEmployees: 2 fictional employees\nFacilities: Synthetic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Descripti"
+            ]
+          },
+          "competition": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "growthOpportunities": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "financing": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "sellerSupportTraining": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "reasonForSelling": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "brokerInformation": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "additionalDetails": [
+            {
+              "label": "Complete source text",
+              "value": "Fictional Cedar Workshop - Synthetic Regression Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabrication services\nEmployees: 2 fictional employees\nFacilities: Synthetic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.\nAd#: 9900001",
+              "excerpts": [
+                "Fictional Cedar Workshop - Synthetic Regression Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabrication services\nEmployees: 2 fictional employees\nFacilities: Synthetic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline regression tests. No real seller, "
+              ]
+            }
+          ]
+        },
+        "overview": {
+          "businessName": {
+            "value": "Fictional Cedar Workshop - Synthetic Regression Data",
+            "source": "rule_based",
+            "excerpts": [
+              "Fictional Cedar Workshop - Synthetic Regression Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabricat"
+            ]
+          },
+          "industry": {
+            "value": "Synthetic fabrication services",
+            "source": "seller_claim",
+            "excerpts": [
+              "Gross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabrication services\nEmployees: 2 fictional employees\nFacilities: Synthetic workshop with equipment included in the asking price.\nInventory:"
+            ]
+          },
+          "location": {
+            "value": "Example City, NC",
+            "source": "seller_claim",
+            "excerpts": [
+              "Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabrication services\nEmployees: 2 fictional employees\nFacilities: Synthetic workshop with equipment"
+            ]
+          },
+          "yearEstablished": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "yearsOperating": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "description": {
+            "value": "Entirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.",
+            "source": "seller_claim",
+            "excerpts": [
+              "asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.\nAd#: 9900001"
+            ]
+          },
+          "services": {
+            "value": "Entirely fictional business used only for offline regression tests",
+            "source": "seller_claim",
+            "excerpts": [
+              "asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.\nAd#: 9900001"
+            ]
+          },
+          "employeeCount": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "ownerInvolvement": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "reasonForSale": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "revenueModel": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "customerSegments": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "includedAssets": {
+            "value": "Inventory: $2345 (unknown); FF&E: $45678 included in asking price (included); Real estate: $345678 included in asking price (included)",
+            "source": "seller_claim",
+            "excerpts": [
+              "Inventory: $2345 (unknown); FF&E: $45678 included in asking price (included); Real estate: $345678 included in asking price (included)"
+            ]
+          }
+        },
+        "financials": {
+          "askingPrice": {
+            "amount": 812345,
+            "raw": "$812345",
+            "source": "seller_claim",
+            "excerpts": [
+              "Fictional Cedar Workshop - Synthetic Regression Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabrication services\nEmployees"
+            ]
+          },
+          "businessAskingPrice": {
+            "amount": null,
+            "raw": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "annualRevenue": {
+            "amount": 456789,
+            "raw": "$456789",
+            "source": "seller_claim",
+            "excerpts": [
+              "Cedar Workshop - Synthetic Regression Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabrication services\nEmployees: 2 fictional employees"
+            ]
+          },
+          "sde": {
+            "amount": null,
+            "raw": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "ebitda": {
+            "amount": null,
+            "raw": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          },
+          "advertisedCashFlow": {
+            "amount": 123456,
+            "raw": "$123456",
+            "source": "seller_claim",
+            "excerpts": [
+              "nthetic Regression Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabrication services\nEmployees: 2 fictional employees\nFacilities: Synthe"
+            ],
+            "sellerTerminology": "Cash Flow"
+          },
+          "inventory": {
+            "value": {
+              "amount": 2345,
+              "raw": "$2345",
+              "source": "seller_claim",
+              "excerpts": [
+                "ies: Synthetic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely ficti"
+              ]
+            },
+            "includedStatus": "unknown",
+            "notes": {
+              "value": "$2345",
+              "source": "seller_claim",
+              "excerpts": [
+                "ies: Synthetic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely ficti"
+              ]
+            }
+          },
+          "ffe": {
+            "value": {
+              "amount": 45678,
+              "raw": "$45678 included in asking price",
+              "source": "seller_claim",
+              "excerpts": [
+                "ic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline re"
+              ]
+            },
+            "includedStatus": "included",
+            "notes": {
+              "value": "$45678 included in asking price",
+              "source": "seller_claim",
+              "excerpts": [
+                "ic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline re"
+              ]
+            }
+          },
+          "realEstate": {
+            "value": {
+              "amount": 345678,
+              "raw": "$345678 included in asking price",
+              "source": "seller_claim",
+              "excerpts": [
+                "king price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline regression tests. No real seller, location, cont"
+              ]
+            },
+            "includedStatus": "included",
+            "notes": {
+              "value": "$345678 included in asking price",
+              "source": "seller_claim",
+              "excerpts": [
+                "king price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline regression tests. No real seller, location, cont"
+              ]
+            },
+            "ownership": {
+              "value": null,
+              "source": "not_disclosed",
+              "excerpts": []
+            },
+            "buildingSize": {
+              "value": null,
+              "source": "not_disclosed",
+              "excerpts": []
+            }
+          },
+          "knownAdditionalAcquisitionCosts": {
+            "amount": null,
+            "raw": null,
+            "source": "calculated",
+            "excerpts": []
+          },
+          "equipmentReplacementNeeds": {
+            "value": "FF&E appears included in the asking price. $45678 included in asking price Verify equipment condition, remaining useful life, maintenance history, liens or loans, payoff requirements, and replacement exposure.",
+            "source": "rule_based",
+            "excerpts": [
+              "FF&E appears included in the asking price. $45678 included in asking price Verify equipment condition, remaining useful life, maintenance history, liens or loans, payoff requirements, and replacement exposure."
+            ]
+          },
+          "immediateCapitalNeeds": {
+            "value": null,
+            "source": "not_disclosed",
+            "excerpts": []
+          }
+        },
+        "ratios": {
+          "askingPriceToSde": null,
+          "businessAskingPriceToSde": null,
+          "askingPriceToEbitda": null,
+          "sdeToRevenue": null
+        },
+        "claritySummary": {
+          "strategicFit": "Rule-based view: this appears to be a Synthetic fabrication services opportunity that should be compared with KingdomHaus operating focus, buyer capabilities, and integration needs.",
+          "attractiveCharacteristics": "Rule-based view: advertised cash flow is disclosed, revenue is disclosed.",
+          "sellerDependence": "Owner responsibilities and working hours are not disclosed; verify post-close coverage and any incremental replacement costs.",
+          "equipmentContinuity": "Rule-based view: FF&E appears included in the asking price. Still verify equipment condition, remaining useful life, liens or loans, maintenance history, and replacement exposure.",
+          "financialQuestions": "Rule-based view: verify advertised cash flow, EBITDA, revenue, tax returns, add-backs, and working capital needs.",
+          "majorRisks": "Rule-based view: major risks include earnings quality, excluded acquisition costs, customer concentration, seller transition, and whether the stated growth opportunities are practical.",
+          "buying": "Entirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.",
+          "attractive": "advertised cash flow is disclosed, revenue is disclosed",
+          "kingdomHausFit": "Rule-based view: this appears to be a Synthetic fabrication services opportunity that should be compared with KingdomHaus operating focus, buyer capabilities, and integration needs.",
+          "threats": "Validate excluded assets, seller dependence, equipment continuity, customer concentration, and financial quality before moving forward.",
+          "unansweredQuestions": "verify advertised cash flow, EBITDA, revenue, tax returns, add-backs, and working capital needs",
+          "verifyBeforeProceeding": "Verify tax returns, add-backs, asset inclusion, real estate terms, inventory cost, customer mix, equipment condition, licenses, and seller transition support."
+        },
+        "riskChecks": [
+          {
+            "label": "Owner dependence",
+            "status": "unknown",
+            "explanation": "Owner responsibilities and working hours are not disclosed; verify post-close coverage and any incremental replacement costs.",
+            "excerpts": []
+          },
+          {
+            "label": "Customer concentration",
+            "status": "unknown",
+            "explanation": "Customer concentration is not established by this rule-based scan; request customer revenue mix.",
+            "excerpts": []
+          },
+          {
+            "label": "Licensing and credentials",
+            "status": "unknown",
+            "explanation": "Licensing and credential requirements are not reliably established from the retained listing text.",
+            "excerpts": []
+          },
+          {
+            "label": "Equipment continuity",
+            "status": "watch",
+            "explanation": "FF&E appears included in the asking price. Verify condition, remaining useful life, liens or loans, maintenance history, and replacement exposure.",
+            "excerpts": [
+              "ic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline re"
+            ]
+          },
+          {
+            "label": "Supplier dependence",
+            "status": "unknown",
+            "explanation": "Supplier dependence is not disclosed; verify vendors, terms, and single-source exposure.",
+            "excerpts": []
+          },
+          {
+            "label": "Key-person risk",
+            "status": "unknown",
+            "explanation": "Key-person dependence beyond the seller is not disclosed.",
+            "excerpts": []
+          },
+          {
+            "label": "Earnings quality",
+            "status": "watch",
+            "explanation": "Verify SDE, EBITDA, add-backs, tax returns, and whether advertised cash flow matches actual free cash flow.",
+            "excerpts": []
+          },
+          {
+            "label": "Near-term capital expenditure",
+            "status": "unknown",
+            "explanation": "No separate capital cost was calculated, but equipment, inventory, and real estate terms still need verification.",
+            "excerpts": []
+          }
+        ],
+        "missingInformation": [
+          "EBITDA is not disclosed.",
+          "Broker information is not disclosed.",
+          "Owner involvement is not clearly disclosed.",
+          "Seller support and training are not disclosed.",
+          "Financing information is not disclosed.",
+          "Customer concentration and top-customer revenue mix are not disclosed.",
+          "Equipment condition, age, remaining useful life, maintenance records, and replacement exposure are not disclosed.",
+          "Supplier dependence, vendor terms, and single-source exposure are not disclosed.",
+          "Financial verification documents, add-backs, working capital needs, and quality of earnings are not supplied.",
+          "Seller transition timeline, post-close role, and training terms are not fully disclosed."
+        ],
+        "sellerClaims": [
+          "Fictional Cedar Workshop - Synthetic Regression Data",
+          "Example City, NC",
+          "Entirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.",
+          "Synthetic workshop with equipment included in the asking price.",
+          "$812345",
+          "$456789",
+          "$123456",
+          "$2345",
+          "$45678 included in asking price",
+          "$345678 included in asking price"
+        ],
+        "aiInferences": [],
+        "calculations": [
+          "Financial multiples were calculated by application code from disclosed or corrected values.",
+          "Known additional acquisition costs count disclosed inventory or FF&E only when marked not included; separately excluded real estate is shown as optional unless required.",
+          "FF&E marked included is not added again to the asking price."
+        ],
+        "decision": {
+          "recommendation": "Keep Reading",
+          "explanation": "The scan is preliminary and rule-based. Keep reading only if the missing facts can be verified with source documents and seller conversations."
+        },
+        "analysisMode": "rule_based",
+        "model": null,
+        "retrieval": {
+          "provider": "apify",
+          "actorId": "synthetic-fixture-actor",
+          "sourceUrl": "https://www.bizbuysell.com/business-opportunity/fictional-fixture-business-not-a-real-listing/9900001/",
+          "retrievedAt": "2025-01-01T00:00:00.000Z",
+          "rawRecord": {},
+          "conflicts": [],
+          "maxChargeUsd": 0.25,
+          "usageUsd": null,
+          "photographs": [
+            {
+              "url": "https://images.bizbuysell.com/shared/listings/990/9900001/synthetic-fixture.webp",
+              "sourceUrl": "https://www.bizbuysell.com/business-opportunity/fictional-fixture-business-not-a-real-listing/9900001/",
+              "alt": "Synthetic URL reference only; no real photograph",
+              "attribution": "Synthetic offline fixture; no image retrieved."
+            }
+          ]
+        }
+      },
+      "form": {
+        "businessName": "Fictional Cedar Workshop",
+        "askingPrice": "",
+        "businessAskingPrice": "",
+        "annualRevenue": "",
+        "sde": "",
+        "ebitda": "",
+        "advertisedCashFlow": "",
+        "inventory": "",
+        "ffe": "",
+        "realEstate": "",
+        "businessWebsite": "https://example.com/synthetic-workshop/",
+        "streetAddress": "8420 Fictional Cedar Way, Example City, NC 28700",
+        "listingUrl": "https://www.bizbuysell.com/business-opportunity/fictional-fixture-business-not-a-real-listing/9900001/",
+        "listingText": "Fictional Cedar Workshop - Synthetic Regression Data\nAsking Price: $812345\nGross Revenue: $456789\nCash Flow: $123456\nLocation: Example City, NC\nIndustry: Synthetic fabrication services\nEmployees: 2 fictional employees\nFacilities: Synthetic workshop with equipment included in the asking price.\nInventory: $2345\nFF&E: $45678 included in asking price\nReal Estate: $345678 included in asking price\nBusiness Description\nEntirely fictional business used only for offline regression tests. No real seller, location, contact, photograph or acquisition is represented.\nAd#: 9900001"
+      },
+      "cashFlow": {
+        "startingMetric": null,
+        "startingAmount": null,
+        "normalizationAdjustment": "",
+        "debtService": "",
+        "managementCosts": "",
+        "capexReserve": "",
+        "workingCapitalReserve": "",
+        "payrollSavings": "",
+        "operatingSavings": "",
+        "improvementCosts": "",
+        "implementationCosts": "",
+        "normalizationNotes": "",
+        "currentReviewed": false,
+        "improvementsReviewed": false,
+        "savingsBasis": "proposed"
+      }
+    }
+  }
+}
