@@ -52,6 +52,7 @@ describe("compact diligence presentation", () => {
       isLoading={false} isFetchingUrl={false} onBack={() => undefined} onDownload={() => undefined}
       onFieldChange={() => undefined} onRefresh={() => undefined} onScanFromUrl={() => undefined} />);
     expect(html).toContain('KingdomHaus Deal Analyzer');
+    expect(html).toContain('Export Deal CSV');
     expect(html).toContain('A deeper look at the opportunity.');
     expect(html).toContain('The Deal Analyzer helps connect disclosed financial information, ownership responsibilities, operating dependencies, and diligence questions behind a listing. It provides an additional analytical perspective beyond the initial rule-based screen.');
     expect(html.indexOf('class="khda-introduction"')).toBeLessThan(html.indexOf('class="primary-action intelligence-action"'));

@@ -70,7 +70,7 @@ export function AcquisitionRecovery({ recovery, busy = false }: { recovery: Retu
         {searchQuery ? <button type="button" aria-label="Clear acquisition search" title="Clear search"
           onClick={() => { setSearchQuery(""); setRequestedPage(1); searchInput.current?.focus(); }}><X aria-hidden="true" /></button> : null}
       </div>
-      <button type="button" onClick={recovery.exportSavedCsv} disabled={disabled || !recovery.records.length}><Download aria-hidden="true" />Export saved scans CSV</button>
+      <button type="button" onClick={recovery.exportSavedCsv} disabled={disabled || !recovery.records.length}><Download aria-hidden="true" />Export Portfolio CSV</button>
       {view.totalPages > 1 ? <p className="saved-acquisition-range" role="status">Showing {view.start}&ndash;{view.end} of {view.total}</p> : null}
       {!recovery.records.length ? <p className="section-note">No acquisitions saved in this browser yet.</p> :
         !view.total ? <p className="section-note">No acquisitions match your search.</p> :

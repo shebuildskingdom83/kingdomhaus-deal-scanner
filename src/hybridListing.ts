@@ -1,5 +1,5 @@
 import { extractListingDetails } from "./listingExtraction";
-import { parseMoney } from "./financial";
+import { parseMoney, MONEY_TOKEN_PATTERN, roundedMoneyMatches } from "./financial";
 import { structuredListingAddress } from "./listingAddress";
 import { safeBusinessWebsite } from "./safeExternalUrl";
 import { equivalentListingLocations, formatScrapedDescription } from "./listingPresentation";
@@ -98,7 +98,7 @@ export function reconcileApifyListing(record: Record<string, unknown>, input: Sc
   }
   const description = formatScrapedDescription(descriptions.filter((text, index) => !descriptions.some((other, n) => n !== index && other.includes(text) && (other.length > text.length || n < index))).join("\n\n"));
   const rawLines = Object.entries(raw).flatMap(([name, value]) => {
-    const label = ({ cashflowsde: "Cash Flow (SDE)", sde: "SDE", location: "Location", broker: "Broker", brokername: "Broker Name", brokercompany: "Broker Company" } as Record<string, string>)[key(name)];
+    const label = ({ cashflowsde: "Cash Flow (SDE)", sde: "SDE", sellersdiscretionaryearnings: "SDE", normalizedsellersdiscretionaryearnings: "SDE", location: "Location", broker: "Broker", brokername: "Broker Name", brokercompany: "Broker Company" } as Record<string, string>)[key(name)];
     return label && plain(value) ? [`${label}: ${plain(value)}`] : [];
   });
   const narrative = [title, "Business Description", description, `Ad#: ${get("id", "listingId") ?? ""}`, ...rawLines].filter(Boolean).join("\n");
@@ -107,20 +107,30 @@ export function reconcileApifyListing(record: Record<string, unknown>, input: Sc
   const lines: string[] = [];
   const add = (label: string, value: unknown, max = 2000) => { const text = plain(value); if (text && text.length <= max) lines.push(`${label}: ${text}`); };
   const amount = (value: unknown) => typeof value === "number" ? (Number.isFinite(value) && value >= 0 ? value : null) :
-    typeof value === "string" && /^\s*\$?\s*[\d,]+(?:\.\d+)?\s*$/.test(value) ? parseMoney(value) : null;
-  const money = (label: string, structured: unknown, evidence: number | null) => {
+    typeof value === "string" && new RegExp(`^${MONEY_TOKEN_PATTERN}\\s*$`, "i").test(value.trim())
+      ? parseMoney(/^\s*\$/.test(value) ? value : `$${value.trim()}`) : null;
+  const money = (label: string, structured: unknown, evidence: number | null, raw: string | null = null) => {
     const mapped = amount(structured);
-    if (mapped !== null && evidence !== null && mapped !== evidence) conflicts.push(`${label}: Apify structured value ${mapped} conflicts with source text ${evidence}. Source text retained; verify before relying on it.`);
-    const chosen = evidence ?? mapped;
+    const roundingOnly = mapped !== null && roundedMoneyMatches(raw, mapped);
+    if (mapped !== null && evidence !== null && mapped !== evidence && !roundingOnly) conflicts.push(`${label}: Apify structured value ${mapped} conflicts with source text ${evidence}. Source text retained; verify before relying on it.`);
+    const chosen = roundingOnly ? mapped : evidence ?? mapped;
     if (chosen !== null) add(label, `$${chosen}`);
   };
   money("Asking Price", get("askingPrice"), extracted.financials.askingPrice.amount);
   money("Business Asking Price", get("businessAskingPrice"), extracted.financials.businessAskingPrice.amount);
   money("Gross Revenue", get("grossRevenue", "annualRevenue", "revenue"), extracted.financials.annualRevenue.amount);
-  money("SDE", get("sde", "sellerDiscretionaryEarnings", "Cash Flow (SDE)"), extracted.financials.sde.amount);
+  const cashFlow = get("cashFlow");
+  const cashAmount = amount(cashFlow);
+  const sde = extracted.financials.sde;
+  // A generic provider cashFlow can refine explicitly labeled SDE only when the
+  // figures agree exactly or within the source's stated rounding precision.
+  const sameSde = sde.amount !== null && cashAmount !== null &&
+    (sde.amount === cashAmount || roundedMoneyMatches(sde.raw, cashAmount));
+  money("SDE", get("sde", "sellerDiscretionaryEarnings", "Seller's Discretionary Earnings", "Normalized Seller's Discretionary Earnings", "Cash Flow (SDE)") ?? (sameSde ? cashFlow : undefined), sde.amount, sde.raw);
   money("EBITDA", get("ebitda"), extracted.financials.ebitda.amount);
   // A provider's generic cashFlow is not evidence of SDE, even when its marketing calls it SDE.
-  money("Cash Flow", get("cashFlow"), extracted.financials.advertisedCashFlow.amount);
+  const advertised = extracted.financials.advertisedCashFlow;
+  money(["SDE", "Cash Flow (SDE)"].includes(advertised.sellerTerminology ?? "") ? "Cash Flow (SDE)" : "Cash Flow", cashFlow, advertised.amount, advertised.raw);
   const city = short(get("city"), 100), state = short(get("state"), 40);
   const locationCandidate = short(get("location"), 140) ?? (city && state ? `${city}, ${state}` : state);
   const cleaned = locationCandidate ? extractListingDetails({ listingText: `Business\nLocation: ${locationCandidate.replace(/(?:Business\s+)?Location\s*:?/gi, "").trim()}` }).overview.location.value : null;

@@ -74,6 +74,7 @@ describe("Saved scans search and pagination", () => {
     const recovery = { records, work: { scan: null }, confirmation: null, exportSavedCsv: noop } as unknown as ReturnType<typeof useAcquisitionRecovery>;
     const html = renderToStaticMarkup(<AcquisitionRecovery recovery={recovery} />);
     expect(html).toContain('placeholder="Search acquisitions..."');
+    expect(html).toContain('Export Portfolio CSV');
     expect(html).toContain('aria-label="Search saved acquisitions by business name"');
     expect(html.match(/class="saved-acquisition-title"/g)).toHaveLength(10);
     expect(html).toContain("Showing 1–10 of 53");

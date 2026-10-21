@@ -425,7 +425,7 @@ export function ResultsScreen(props: {
           </button>
           <button type="button" onClick={exportCurrentCsv}>
             <Download aria-hidden="true" />
-            Export CSV
+            Export Deal CSV
           </button>
           <button type="button" disabled aria-disabled="true">
             <Send aria-hidden="true" />

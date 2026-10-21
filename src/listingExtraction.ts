@@ -1,4 +1,4 @@
-import { calculateKnownAdditionalCosts, isOptionalRealEstate, parseMoney } from "./financial";
+import { calculateKnownAdditionalCosts, isOptionalRealEstate, parseMoney, MONEY_TOKEN_PATTERN } from "./financial";
 import { safeBusinessWebsite } from "./safeExternalUrl";
 import { streetAddressFact } from "./listingAddress";
 import type {
@@ -50,6 +50,10 @@ const knownLabels = [
   "Annual Revenue",
   "Revenue",
   "SDE",
+  "Normalized Seller's Discretionary Earnings",
+  "Normalized Seller\u2019s Discretionary Earnings",
+  "Seller's Discretionary Earnings",
+  "Seller\u2019s Discretionary Earnings",
   "EBITDA",
   "Established",
   "Employees",
@@ -751,16 +755,13 @@ function extractTransactionBreakdown(text: string): TransactionBreakdown | null 
 
 function extractExplicitSde(text: string): string | null {
   return firstValue(
-    findPattern(text, /\bSDE\b[^$\n.]{0,90}(\$[0-9][0-9,]*(?:\.\d+)?)/i),
-    findPattern(text, /(\$[0-9][0-9,]*(?:\.\d+)?)\s*(?:in\s+)?\bSDE\b/i)
+    findPattern(text, new RegExp(`\\b(?:SDE|(?:Normalized\\s+)?Seller['\\u2019]?s\\s+Discretionary\\s+Earnings)(?:\\s*\\(SDE\\))?\\s*:?\\s*(?:approximately\\s*|about\\s*|~\\s*)?(${MONEY_TOKEN_PATTERN})`, "i")),
+    findPattern(text, new RegExp(`(${MONEY_TOKEN_PATTERN})\\s*(?:in\\s+)?\\bSDE\\b`, "i"))
   );
 }
 
 function extractCashFlowSde(text: string): string | null {
-  return firstValue(
-    findPattern(text, /\bCash\s+Flow\s*\(\s*SDE\s*\)\s*:?\s*(\$[0-9][0-9,]*(?:\.\d+)?)/i),
-    findPattern(text, /\bCash\s+Flow\s*\(\s*SDE\s*\)\s*\n\s*(\$[0-9][0-9,]*(?:\.\d+)?)/i)
-  );
+  return findPattern(text, new RegExp(`\\bCash\\s+Flow\\s*\\(\\s*SDE\\s*\\)\\s*:?\\s*(?:approximately\\s*|about\\s*|~\\s*)?(${MONEY_TOKEN_PATTERN})`, "i"));
 }
 
 function inferGrowthOpportunities(text: string): string | null {
@@ -852,9 +853,9 @@ function cleanDescription(value: string): string {
     .replace(/\bPRICE\s+INCLUDES\s+BUSINESS\s*&\s*REAL\s+ESTATE!?\s*Business\s*:\s*\$[0-9][0-9,]*(?:\.\d+)?\s*&\s*Real\s+Estate\s*:\s*\$[0-9][0-9,]*(?:\.\d+)?\.?/gi, "")
     .replace(/\b(?:The\s+)?transaction\s+includes\s+the\s+business,\s*furniture,\s*fixtures,\s*and\s*equipment,\s*inventory,\s*and\s*the\s+owned\s+real\s+estate\.?/gi, "")
     .replace(/\bInventory\s+and\s+FF&E\s+are\s+included\s+in\s+the\s+transaction,\s+with\s+individual\s+values\s+not\s+separately\s+disclosed\.?/gi, "")
-    .replace(/\bCash\s+Flow\s*\(\s*SDE\s*\)\s*:?\s*\$[0-9][0-9,]*(?:\.\d+)?/gi, "")
-    .replace(/\bGross\s+Revenue\s*:?\s*\$[0-9][0-9,]*(?:\.\d+)?/gi, "")
-    .replace(/\bEBITDA\s*:?\s*(?:N\/A|Not\s+Disclosed|\$[0-9][0-9,]*(?:\.\d+)?)/gi, "")
+    .replace(new RegExp(`\\bCash\\s+Flow\\s*\\(\\s*SDE\\s*\\)\\s*:?\\s*${MONEY_TOKEN_PATTERN}`, "gi"), "")
+    .replace(new RegExp(`\\bGross\\s+Revenue\\s*:?\\s*${MONEY_TOKEN_PATTERN}`, "gi"), "")
+    .replace(new RegExp(`\\bEBITDA\\s*:?\\s*(?:N/A|Not\\s+Disclosed|${MONEY_TOKEN_PATTERN})`, "gi"), "")
     .trim();
   const sentences = splitIntoSentences(cleaned);
   cleaned = uniqueSentencesByFingerprint(sentences).join(" ") || cleaned;
@@ -909,7 +910,7 @@ function findSentence(text: string, patterns: RegExp[]): string | null {
 
 function splitIntoSentences(text: string): string[] {
   const normalized = normalizeWhitespace(text).replace(/\n+/g, " ");
-  const matches = normalized.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g) ?? [];
+  const matches = normalized.split(/(?<=[.!?])\s+/);
   return matches.map((sentence) => sentence.trim()).filter(Boolean);
 }
 

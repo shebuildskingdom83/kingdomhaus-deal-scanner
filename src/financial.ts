@@ -1,5 +1,18 @@
 import type { AssetDetail, RatioSnapshot, RealEstateDetail } from "./types";
 
+// Keep magnitude suffixes attached when extracting currency from surrounding text.
+export const MONEY_TOKEN_PATTERN = String.raw`\$?\s*-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:\s*(?:million|thousand|[mk])\b)?`;
+
+export function roundedMoneyMatches(raw: string | null, exact: number): boolean {
+  if (!raw) return false;
+  const match = raw.trim().match(/^\$?\s*(\d+(?:\.\d+)?)\s*(million|thousand|m|k)$/i);
+  if (!match) return false;
+  const magnitude = /^(m|million)$/i.test(match[2]) ? 1_000_000 : 1_000;
+  const decimals = match[1].split(".")[1]?.length ?? 0;
+  const tolerance = magnitude / 10 ** decimals / 2;
+  return Math.abs(Number(match[1]) * magnitude - exact) <= tolerance + Number.EPSILON * magnitude;
+}
+
 export function parseMoney(input: string | null | undefined): number | null {
   if (!input) {
     return null;
