@@ -5,7 +5,7 @@ import { MAX_BACKUP_BYTES, parseJson, retainedState, validateDraft, validateReco
 import { resolvedStreetAddress } from "./listingAddress";
 
 export const storageKey = "kingdomhaus-deal-scans:v1";
-export const MAX_RECORDS = 20;
+export const MAX_RECORDS = 100;
 type Store = Pick<Storage, "getItem" | "setItem">;
 type Library = { schemaVersion: 2; records: AcquisitionRecord[]; draft: RecoveryDraft | null };
 export type LibraryLoad = Library & { notice: string | null };
@@ -98,7 +98,7 @@ export class AcquisitionRepository {
     if (this.raw === undefined) throw new Error("Saved storage could not be loaded. Export your open work before leaving.");
     if (current !== this.raw) throw new Error("Saved work changed in another tab. Export your open work, then reload before saving.");
     const next = update(readLibrary(current));
-    if (next.records.length > MAX_RECORDS) throw new Error("Saved scans are full (20 records). Export and delete an older record first.");
+    if (next.records.length > MAX_RECORDS) throw new Error(`Saved scans are full (${MAX_RECORDS} records). Export and delete an older record first.`);
     const encoded = JSON.stringify(next);
     if (new TextEncoder().encode(encoded).byteLength > 4_000_000) throw storageError();
     readLibrary(encoded);

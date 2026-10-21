@@ -5,8 +5,13 @@ import Download from "lucide-react/dist/esm/icons/download";
 import Upload from "lucide-react/dist/esm/icons/upload";
 import Pencil from "lucide-react/dist/esm/icons/pencil";
 import Trash2 from "lucide-react/dist/esm/icons/trash-2";
+import Search from "lucide-react/dist/esm/icons/search";
+import X from "lucide-react/dist/esm/icons/x";
+import ChevronLeft from "lucide-react/dist/esm/icons/chevron-left";
+import ChevronRight from "lucide-react/dist/esm/icons/chevron-right";
 import type { useAcquisitionRecovery } from "./useAcquisitionRecovery";
 import { MAX_BACKUP_BYTES } from "./recordValidation";
+import { savedAcquisitionView } from "./savedAcquisitionView";
 
 export function AcquisitionRecovery({ recovery, busy = false }: { recovery: ReturnType<typeof useAcquisitionRecovery>; busy?: boolean }) {
   const input = useRef<HTMLInputElement>(null);
@@ -14,6 +19,11 @@ export function AcquisitionRecovery({ recovery, busy = false }: { recovery: Retu
   const [name, setName] = useState("");
   const [importing, setImporting] = useState(false);
   const [backupSource, setBackupSource] = useState("current");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [requestedPage, setRequestedPage] = useState(1);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const view = savedAcquisitionView(recovery.records, searchQuery, requestedPage);
+  useEffect(() => { setRequestedPage(view.page); }, [view.page]);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (recovery.confirmation && !dialog.current?.open) dialog.current?.showModal();
@@ -53,9 +63,18 @@ export function AcquisitionRecovery({ recovery, busy = false }: { recovery: Retu
     </div>
     <details className="saved-acquisitions">
       <summary><FolderOpen aria-hidden="true" />Saved scans <span>({recovery.records.length})</span></summary>
+      <div className="saved-acquisition-search">
+        <Search aria-hidden="true" />
+        <input ref={searchInput} type="search" aria-label="Search saved acquisitions by business name" placeholder="Search acquisitions..."
+          value={searchQuery} onChange={event => { setSearchQuery(event.target.value); setRequestedPage(1); }} />
+        {searchQuery ? <button type="button" aria-label="Clear acquisition search" title="Clear search"
+          onClick={() => { setSearchQuery(""); setRequestedPage(1); searchInput.current?.focus(); }}><X aria-hidden="true" /></button> : null}
+      </div>
       <button type="button" onClick={recovery.exportSavedCsv} disabled={disabled || !recovery.records.length}><Download aria-hidden="true" />Export saved scans CSV</button>
+      {view.totalPages > 1 ? <p className="saved-acquisition-range" role="status">Showing {view.start}&ndash;{view.end} of {view.total}</p> : null}
       {!recovery.records.length ? <p className="section-note">No acquisitions saved in this browser yet.</p> :
-        <ul className="saved-acquisition-list">{recovery.records.map(record => <li key={record.id}>
+        !view.total ? <p className="section-note">No acquisitions match your search.</p> :
+        <ul className="saved-acquisition-list">{view.records.map(record => <li key={record.id}>
           <div className="saved-acquisition-title"><strong>{record.name}</strong><small>Updated {new Date(record.updatedAt).toLocaleDateString()} · {record.origin === "imported" ? "Imported backup" : "Local record"}</small></div>
           {renaming === record.id ? <form className="rename-acquisition" onSubmit={e => { e.preventDefault(); recovery.rename(record, name); setRenaming(null); }}>
             <label><span className="sr-only">New acquisition name</span><input autoFocus value={name} onChange={e => setName(e.target.value)} maxLength={120} required /></label>
@@ -66,6 +85,11 @@ export function AcquisitionRecovery({ recovery, busy = false }: { recovery: Retu
             <button type="button" title="Delete saved acquisition" aria-label={"Delete " + record.name} onClick={() => recovery.remove(record)} disabled={disabled}><Trash2 aria-hidden="true" /></button>
           </div>}
         </li>)}</ul>}
+      {view.totalPages > 1 ? <nav className="saved-acquisition-pagination" aria-label="Saved acquisitions pages">
+        <button type="button" disabled={view.page === 1} onClick={() => setRequestedPage(view.page - 1)}><ChevronLeft aria-hidden="true" />Previous</button>
+        <span>Page {view.page} of {view.totalPages}</span>
+        <button type="button" disabled={view.page === view.totalPages} onClick={() => setRequestedPage(view.page + 1)}>Next<ChevronRight aria-hidden="true" /></button>
+      </nav> : null}
       <details className="backup-management">
         <summary>Manage Backups</summary>
         <div className="backup-controls">

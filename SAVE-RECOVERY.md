@@ -34,7 +34,8 @@ Optional Puter output remains session-only and is not saved or promoted to verif
 - Repository key: kingdomhaus-deal-scans:v1 (reused, not a parallel storage system).
 - Library schema version: 2. Acquisition record and single-record backup schema version: 1.
 - Backup format identifier: kingdomhaus-acquisition.
-- Up to 20 saved records; a 2 MB backup limit and 4 MB application storage budget apply. Browser quotas may be lower. Nothing is silently evicted.
+- Up to 100 saved records; a 2 MB backup limit and 4 MB application storage budget apply. Browser quotas may be lower. Nothing is silently evicted.
+- Saved scans search matches business names case-insensitively, including partial phrases. Results are sorted by most recent update and shown ten per page. Search and pagination do not change saved records or limit the full-library CSV export.
 - Invalid fields, unexpected keys, unsafe prototype keys and unsupported versions are rejected. Imports cannot configure credentials or trigger provider calls. A backup is untrusted user-supplied data, not proof that its claims or review flags are authentic.
 - Known earlier scan arrays migrate without recalculating historical values. Fields absent from those formats stay unknown or explicitly unavailable. Earlier cash-flow assumptions cannot be recovered if they were never saved.
 - Malformed/unsupported existing storage is not cleared or replaced. **Export stored recovery data** downloads its exact bytes for manual recovery; this is not necessarily a normal importable acquisition backup.

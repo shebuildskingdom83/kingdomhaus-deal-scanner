@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { buildLocalPreviewScan } from "../src/validation";
 import { syntheticManufacturingFixture, syntheticManufacturingUrl } from "./fixtures";
 import { createCashFlowAssumptions, calculateAcquisitionCashFlow } from "../src/acquisitionCashFlow";
-import { AcquisitionRepository, downloadBackup, formFromScan, makeRecord, matchingRecord, parseBackup, serializeBackup, storageKey } from "../src/storage";
+import { AcquisitionRepository, downloadBackup, formFromScan, makeRecord, matchingRecord, parseBackup, serializeBackup, storageKey, MAX_RECORDS } from "../src/storage";
 import { retainedState } from "../src/recordValidation";
 import { ResultsScreen } from "../src/App";
 import { downloadScanPdf } from "../src/pdf";
@@ -106,11 +106,13 @@ describe("versioned browser acquisition repository", () => {
     expect(() => other.recover(null)).toThrow(/another tab/);
     expect(new AcquisitionRepository(() => store).load().records[0]).toEqual(record);
   });
-  it("never silently evicts the 21st record", () => {
-    const { repo, record } = setup();
-    for (let i = 0; i < 20; i++) repo.save({ ...record, id: "record-" + i }, null);
-    expect(() => repo.save({ ...record, id: "record-20" }, null)).toThrow(/20 records/);
-    expect(repo.load().records).toHaveLength(20);
+  it("never silently evicts records when the library reaches its record limit", () => {
+    const { repo, record, store } = setup();
+    store.setItem(storageKey, JSON.stringify({ schemaVersion: 2, draft: null,
+      records: Array.from({ length: MAX_RECORDS }, (_, i) => ({ ...record, id: "record-" + i })) }));
+    repo.load();
+    expect(() => repo.save({ ...record, id: "record-overflow" }, null)).toThrow(new RegExp(`${MAX_RECORDS} records`));
+    expect(repo.load().records).toHaveLength(MAX_RECORDS);
   });
   it("migrates valid legacy scan arrays without inventing financial inputs; rejects malformed legacy data", () => {
     const { store, record } = setup();
