@@ -48,24 +48,19 @@ const cloudSettled = async (target = page) => {
 };
 const signIn = async (target = page) => {
   await target.goto(base + "/cloud");
-  await target.getByRole("button", { name: "Sign in with Google" }).waitFor();
+  await target.waitForURL(new URL("/", base).href);
+  await target.getByRole("button", { name: "Sign In", exact: true }).waitFor();
   if (target === page) {
     for (const [label, width, height] of [["desktop", 1440, 1000], ["tablet", 768, 1024], ["mobile", 390, 844], ["small-mobile", 320, 740]] as const) {
       await target.setViewportSize({ width, height });
-      const card = target.getByRole("region", { name: "Cloud account" });
-      await card.getByRole("heading", { name: "Sign in to Deal Scanner" }).waitFor();
-      assert.equal(await card.getByText("Access your saved acquisitions.", { exact: true }).count(), 1);
-      const cardBox = (await card.boundingBox())!;
-      const button = card.getByRole("button", { name: "Sign in with Google" });
+      const button = target.getByRole("button", { name: "Sign In", exact: true });
+      if (!(await button.isVisible())) await target.getByRole("button", { name: "Open navigation" }).click();
       const buttonBox = (await button.boundingBox())!;
-      const headerBox = (await target.locator(".app-header").boundingBox())!;
-      assert.ok(cardBox.width <= 440 && cardBox.y >= headerBox.y + headerBox.height);
-      assert.ok(Math.abs(cardBox.x + cardBox.width / 2 - width / 2) < 2);
-      assert.ok(buttonBox.height >= 44 && buttonBox.width < cardBox.width - 32);
+      assert.ok(buttonBox.height >= 44 && buttonBox.x >= 0 && buttonBox.x + buttonBox.width <= width);
       await button.focus();
       assert.equal(await button.evaluate((element: Element) => element === document.activeElement), true);
       assert.equal(await target.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
-      await target.screenshot({ path: resolve(artifacts, "cloud-signin-" + label + ".png"), fullPage: true });
+      await target.screenshot({ path: resolve(artifacts, "landing-signin-" + label + ".png"), fullPage: true });
     }
     await target.setViewportSize({ width: 1440, height: 1000 });
   }
@@ -80,6 +75,7 @@ const signIn = async (target = page) => {
     await sdk.signInWithCredential(client.cloudClient().auth,
       sdk.GoogleAuthProvider.credential(JSON.stringify({ sub: "synthetic-google-founder", email: "founder@example.test", email_verified: true })));
   });
+  await target.getByRole("link", { name: "Launch Analyzer" }).first().click();
   await target.getByRole("heading", { name: "Acquisition Portfolio", exact: true }).waitFor();
 };
 try {
@@ -187,7 +183,7 @@ try {
   const restarted = await browser.newContext();
   const restartedPage = await restarted.newPage();
   await restartedPage.goto(base + "/cloud");
-  await restartedPage.getByRole("button", { name: "Sign in with Google" }).waitFor();
+  await restartedPage.waitForURL(new URL("/", base).href);
   assert.equal(await restartedPage.evaluate(() => localStorage.length), 0);
   await signIn(restartedPage);
   await cloudSettled(restartedPage);

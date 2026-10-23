@@ -8,7 +8,7 @@ import { createCashFlowAssumptions } from "../src/acquisitionCashFlow";
 const state = vi.hoisted(() => ({ user: { uid: "synthetic-founder" } as { uid: string } | null,
   configurationError: null as string | null, authFailure: null as unknown,
   changeUser: null as ((user: { uid: string } | null) => void) | null,
-  recovery: null as unknown as RecoveryControls, signIn: vi.fn(async () => {}), signOut: vi.fn(async () => {}), home: vi.fn(), repository: vi.fn(() => ({})) }));
+  recovery: null as unknown as RecoveryControls, signOut: vi.fn(async () => {}), home: vi.fn(), repository: vi.fn(() => ({})) }));
 vi.mock("../src/websiteNavigation", () => ({ returnToHomepage: state.home }));
 vi.mock("firebase/auth", () => ({
   onIdTokenChanged: (_auth: unknown, callback: (user: typeof state.user) => void, error: (failure: unknown) => void) => {
@@ -20,7 +20,7 @@ vi.mock("firebase/auth", () => ({
   signOut: state.signOut
 }));
 vi.mock("../src/firebaseClient", () => ({ cloudClient: () => ({ auth: { get currentUser() { return state.user; } }, repository: state.repository }),
-  cloudConfigurationError: () => state.configurationError, cloudEmulator: false, cloudSignIn: state.signIn, founderUid: "synthetic-founder" }));
+  cloudConfigurationError: () => state.configurationError, founderUid: "synthetic-founder" }));
 vi.mock("../src/useCloudAcquisitionRecovery", () => ({ useCloudAcquisitionRecovery: () => state.recovery }));
 import CloudApp from "../src/CloudApp";
 
@@ -34,7 +34,7 @@ function controls(report = false): RecoveryControls {
     exportCurrent: vi.fn(), exportRecord: vi.fn(), exportSavedCsv: vi.fn(), exportStoredRecovery: vi.fn(), reportError: vi.fn(),
     cancelConfirmation: vi.fn(), acceptConfirmation: vi.fn(), cloud: { status: "Saved", ready: true, busy: false, retry: vi.fn() } };
 }
-beforeEach(() => { state.user = { uid: "synthetic-founder" }; state.configurationError = null; state.authFailure = null; state.recovery = controls(); state.repository.mockClear(); state.signOut.mockReset(); state.home.mockClear(); state.signIn.mockReset(); });
+beforeEach(() => { state.user = { uid: "synthetic-founder" }; state.configurationError = null; state.authFailure = null; state.recovery = controls(); state.repository.mockClear(); state.signOut.mockReset(); state.home.mockClear(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.restoreAllMocks(); });
 async function loaded() { render(<CloudApp />); await screen.findByRole("button", { name: "Sign out" }); }
 
@@ -47,101 +47,39 @@ describe("cloud workspace presentation without persistence changes", () => {
     expect(state.repository).not.toHaveBeenCalled();
     await screen.findByRole("heading", { name: "Acquisition Portfolio" });
   });
-  it.each([null, "unauthorized-synthetic", "synthetic-founder"])("offers a native same-tab Home link across access states (%s)", async uid => {
+  it.each([null, "unauthorized-synthetic", "synthetic-founder"])("keeps the same-tab Home link across access states (%s)", async uid => {
     state.user = uid ? { uid } : null;
     render(<CloudApp />);
     if (uid) await screen.findByRole("button", { name: "Sign out" });
-    else await screen.findByRole("button", { name: "Sign in with Google" });
+    else await waitFor(() => expect(state.home).toHaveBeenCalledTimes(1));
     const link = within(screen.getByRole("banner", { name: "Application header" })).getByRole("link", { name: "KingdomHaus Home" });
     expect(link.getAttribute("href")).toBe("/");
     expect(link.getAttribute("target")).toBeNull();
     if (uid !== "synthetic-founder") expect(state.repository).not.toHaveBeenCalled();
   });
-  it("groups the signed-out heading, explanation, and Google control in a compact account region", async () => {
-    state.user = null; await loadedSignIn();
-    const card = screen.getByRole("region", { name: "Cloud account" });
-    expect(card.classList.contains("cloud-auth-card")).toBe(true);
-    expect(within(card).getByRole("heading", { name: "Sign in to Deal Scanner", level: 2 })).toBeTruthy();
-    expect(within(card).getByText("Access your saved acquisitions.")).toBeTruthy();
-    fireEvent.click(within(card).getByRole("button", { name: "Sign in with Google" }));
-    await waitFor(() => expect(state.signIn).toHaveBeenCalledTimes(1));
-    expect(state.repository).not.toHaveBeenCalled();
-  });
-  it("prevents repeated sign-in while pending and retains an accessible retry after failure", async () => {
+  it("redirects signed-out direct access only after Firebase restores the session", async () => {
     state.user = null;
-    let rejectSignIn!: (reason: unknown) => void;
-    state.signIn.mockImplementationOnce(() => new Promise<void>((_resolve, reject) => { rejectSignIn = reject; }));
-    await loadedSignIn();
-    const button = screen.getByRole("button", { name: "Sign in with Google" });
-    fireEvent.click(button); expect((button as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(button); expect(state.signIn).toHaveBeenCalledTimes(1);
-    rejectSignIn({ code: "auth/internal-error", message: "Synthetic technical Firebase details" });
-    expect((await screen.findByRole("alert")).textContent).toBe("Unable to sign in. Please try again.");
-    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
-    fireEvent.click(button); await waitFor(() => expect(state.signIn).toHaveBeenCalledTimes(2));
-    expect(screen.queryByRole("alert")).toBeNull();
-  });
-  it.each(["auth/popup-closed-by-user", "auth/user-cancelled"])("treats confirmed cancellation silently and allows retry (%s)", async code => {
-    state.user = null; state.signIn.mockRejectedValueOnce({ code, message: "Synthetic Firebase cancellation" });
-    await loadedSignIn();
-    const button = screen.getByRole("button", { name: "Sign in with Google" });
-    fireEvent.click(button);
-    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.queryByText(/auth\//)).toBeNull();
+    render(<CloudApp />);
+    expect(screen.getByRole("status").textContent).toBe("Checking sign-in...");
+    expect(state.home).not.toHaveBeenCalled();
+    expect(screen.queryByRole("heading", { name: "Acquisition Portfolio" })).toBeNull();
+    await waitFor(() => expect(state.home).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("button", { name: "Sign in with Google" })).toBeNull();
+    expect(screen.getByRole("status").textContent).toContain("Sign in from the homepage");
     expect(state.repository).not.toHaveBeenCalled();
-    fireEvent.click(button);
-    await waitFor(() => expect(state.signIn).toHaveBeenCalledTimes(2));
   });
-  it.each([
-    ["auth/network-request-failed", "Connection issue. Please try again."],
-    ["auth/internal-error", "Unable to sign in. Please try again."],
-    ["auth/cancelled-popup-request", "Unable to sign in. Please try again."],
-    ["auth/popup-blocked", "Unable to sign in. Please try again."],
-    ["auth/unauthorized-domain", "Unable to sign in. Please try again."],
-    ["auth/user-disabled", "This account doesn't have access to Deal Scanner."],
-    ["auth/admin-restricted-operation", "This account doesn't have access to Deal Scanner."]
-  ])("shows concise accessible feedback for genuine failure (%s)", async (code, message) => {
-    state.user = null; state.signIn.mockRejectedValueOnce({ code, message: "Long synthetic Firebase implementation details" });
-    await loadedSignIn(); fireEvent.click(screen.getByRole("button", { name: "Sign in with Google" }));
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe(message);
-    expect(alert.classList.contains("cloud-auth-error")).toBe(true);
-    expect(screen.getByRole("button", { name: "Sign in with Google" }).getAttribute("aria-describedby")).toBe(alert.id);
-    expect(screen.queryByText(/Firebase implementation/)).toBeNull();
-    expect(state.repository).not.toHaveBeenCalled();
-    vi.useFakeTimers(); await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
-    expect(screen.getByRole("alert").textContent).toBe(message);
-  });
-  it.each([null, "Synthetic failure", { message: "Unknown technical failure" }])("handles an unknown sign-in rejection without leaking details (%s)", async failure => {
-    state.user = null; state.signIn.mockRejectedValueOnce(failure);
-    await loadedSignIn(); fireEvent.click(screen.getByRole("button", { name: "Sign in with Google" }));
-    expect((await screen.findByRole("alert")).textContent).toBe("Unable to sign in. Please try again.");
-  });
-  it("clears a stale failure on retry even when that retry is cancelled", async () => {
-    state.user = null;
-    state.signIn.mockRejectedValueOnce({ code: "auth/network-request-failed" }).mockRejectedValueOnce({ code: "auth/popup-closed-by-user" });
-    await loadedSignIn(); const button = screen.getByRole("button", { name: "Sign in with Google" });
-    fireEvent.click(button); await screen.findByRole("alert");
-    fireEvent.click(button); expect(screen.queryByRole("alert")).toBeNull();
-    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(false));
-    expect(screen.queryByRole("alert")).toBeNull();
-  });
-  it("clears a stale error on authenticated state changes while keeping founder authorization", async () => {
-    state.user = null; state.signIn.mockRejectedValueOnce({ code: "auth/network-request-failed" });
-    await loadedSignIn(); fireEvent.click(screen.getByRole("button", { name: "Sign in with Google" }));
-    await screen.findByRole("alert");
-    act(() => state.changeUser?.({ uid: "synthetic-founder" }));
-    expect(screen.getByRole("heading", { name: "Acquisition Portfolio" })).toBeTruthy();
-    expect(screen.queryByRole("alert")).toBeNull();
+  it("closes the current workspace before redirecting when the account signs out elsewhere", async () => {
+    await loaded();
+    await screen.findByRole("heading", { name: "Acquisition Portfolio" });
     act(() => state.changeUser?.(null));
-    expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByRole("button", { name: "Sign in with Google" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Acquisition Portfolio" })).toBeNull();
+    await waitFor(() => expect(state.home).toHaveBeenCalledTimes(1));
   });
-  it("keeps genuine session-restoration failures visible", async () => {
+  it("returns to the landing page after auth-restoration failure without loading acquisitions", async () => {
     state.user = null; state.authFailure = { code: "auth/network-request-failed" };
-    await loadedSignIn();
-    expect(screen.getByRole("alert").textContent).toBe("Connection issue. Please try again.");
+    render(<CloudApp />);
+    await waitFor(() => expect(state.home).toHaveBeenCalledTimes(1));
+    expect(screen.queryByRole("heading", { name: "Acquisition Portfolio" })).toBeNull();
     expect(state.repository).not.toHaveBeenCalled();
   });
   it("preserves configuration errors and keeps sign-in and acquisitions locked", () => {
@@ -212,17 +150,12 @@ describe("cloud workspace presentation without persistence changes", () => {
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining("discard in-memory edits"));
     expect(screen.getAllByRole("button", { name: "Reload cloud workspace" })).toHaveLength(1);
   });
-  it("retains the branded sign-in and unauthorized-account screens without exposing acquisitions", async () => {
-    state.user = null; await loadedSignIn(); cleanup();
-    state.user = { uid: "unauthorized-synthetic" }; await loaded();
-    expect(screen.getByRole("alert").textContent).toBe("This account doesn't have access to Deal Scanner.");
+  it("keeps an unapproved account outside the workspace without showing another sign-in action", async () => {
+    state.user = { uid: "unauthorized-synthetic" };
+    render(<CloudApp />);
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("button", { name: "Sign in with Google" })).toBeNull();
     expect(state.repository).not.toHaveBeenCalled();
     expect(document.querySelector(".acquisition-recovery")).toBeNull();
   });
 });
-async function loadedSignIn() {
-  render(<CloudApp />); await screen.findByRole("button", { name: "Sign in with Google" });
-  expect(screen.getByRole("banner", { name: "Application header" })).toBeTruthy();
-  expect(within(screen.getByRole("banner", { name: "Application header" })).queryByText("KingdomHaus Intelligence")).toBeNull();
-  expect(document.querySelector(".acquisition-recovery")).toBeNull();
-}

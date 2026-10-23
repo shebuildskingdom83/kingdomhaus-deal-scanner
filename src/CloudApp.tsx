@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import LogOut from "lucide-react/dist/esm/icons/log-out";
 import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
 import AlertCircle from "lucide-react/dist/esm/icons/alert-circle";
-import { cloudClient, cloudConfigurationError, cloudEmulator, cloudSignIn, founderUid } from "./firebaseClient";
+import { cloudClient, cloudConfigurationError, founderUid } from "./firebaseClient";
 import { AppHeader, initialForm } from "./App";
 import { AcquisitionWorkspace } from "./AcquisitionWorkspace";
 import { useCloudAcquisitionRecovery } from "./useCloudAcquisitionRecovery";
@@ -22,8 +22,6 @@ function CloudAccess() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [signInError, setSignInError] = useState("");
-  const [signingIn, setSigningIn] = useState(false);
   const [session, setSession] = useState(0);
   const [workspace, setWorkspace] = useState<WorkspaceSession | null>(null);
   const currentWorkspace = useRef<WorkspaceSession | null>(null);
@@ -36,7 +34,7 @@ function CloudAccess() {
       const turn = ++version;
       const same = currentWorkspace.current?.active && currentWorkspace.current.uid === current?.uid;
       if (!same) { clear(); setLoading(true); }
-      setUser(current); setSignInError(""); setError("");
+      setUser(current); setError("");
       const accept = (admitted: boolean) => {
         if (disposed || turn !== version || auth.currentUser !== current) return;
         if (current && admitted) {
@@ -49,14 +47,17 @@ function CloudAccess() {
       };
       if (!current || isFounderAccount(current.uid, founderUid)) accept(Boolean(current));
       else void workspaceAdmitted(current, founderUid).then(accept).catch(() => {
-        if (!disposed && turn === version) { clear(); setLoading(false); setSignInError("Unable to verify workspace access. Please sign in again."); }
+        if (!disposed && turn === version) { clear(); setLoading(false); setError("Unable to verify workspace access. Please try again."); }
       });
     }, failure => {
       ++version; clear(); setUser(null);
-      setSignInError(signInErrorMessage(failure) || "Unable to sign in. Please try again."); setLoading(false);
+      setError(signInErrorMessage(failure) || "Unable to sign in. Please try again."); setLoading(false);
     });
     return () => { disposed = true; ++version; unsubscribe(); currentWorkspace.current?.close(); currentWorkspace.current = null; };
   }, []);
+  useEffect(() => {
+    if (!loading && !user && !signingOut) returnToHomepage();
+  }, [loading, user, signingOut]);
   const authorized = Boolean(workspace?.active);
   const accountAction = user ? <>
     <button type="button" className="ghost-button cloud-header-action" onClick={async () => {
@@ -67,7 +68,7 @@ function CloudAccess() {
         await signOut(auth);
         // A completed old sign-out must not clear a different account selected while it was pending.
         if (auth.currentUser && auth.currentUser !== user) { setSigningOut(false); return; }
-        setUser(null); setSigningOut(false); returnToHomepage();
+        setUser(null); setSigningOut(false);
       } catch {
         if (auth.currentUser && auth.currentUser !== user) setSigningOut(false);
         else setError("Sign-out failed. Please try again.");
@@ -81,25 +82,15 @@ function CloudAccess() {
   if (signingOut) return <main className="app-shell intake-shell"><AppHeader activeView="Scan" actions={accountAction} /><section className="cloud-access"><p role="status">Your workspace is closed. Completing sign-out...</p></section></main>;
   if (loading) return <main className="app-shell intake-shell"><AppHeader activeView="Scan" /><section className="cloud-access" aria-label="Cloud account" aria-busy="true"><p role="status">Checking sign-in...</p></section></main>;
   if (authorized && user && workspace) return <CloudWorkspace key={session + ":" + user.uid + ":" + workspace.epoch} workspace={workspace} accountAction={accountAction} onReload={reload} />;
-  return <main className="app-shell intake-shell">
-    <AppHeader activeView="Scan" actions={accountAction} />
-    <section className={user ? "cloud-access" : "cloud-access cloud-auth-card"} aria-label="Cloud account">
-      {!user ? <>
-        <h2>Sign in to Deal Scanner</h2>
-        <p className="cloud-auth-description">Access your saved acquisitions.</p>
-      </> : null}
-      <div className={user ? "recovery-actions" : "cloud-auth-actions"}>
-        {cloudEmulator ? <strong>Synthetic cloud preview</strong> : null}
-        {loading ? <span role="status">Checking sign-in...</span> : !user ? <button type="button" className="primary-action" disabled={signingIn} aria-busy={signingIn} aria-describedby={signInError ? "cloud-auth-error" : undefined}
-          onClick={async () => { setSignInError(""); setSigningIn(true); try { await cloudSignIn(); } catch (failure) {
-            setSignInError(signInErrorMessage(failure));
-          } finally { setSigningIn(false); } }}>Sign in with Google</button> : null}
-      </div>
-      {!founderUid ? <p role="status">Acquisition access remains locked until founder authorization is configured.</p> : null}
-      {!loading && user && !authorized ? <p className="cloud-auth-error" role="alert"><AlertCircle aria-hidden="true" /><span>This account doesn't have access to Deal Scanner.</span></p> : null}
-      {!user ? <div className="cloud-auth-feedback">
-        {signInError ? <p id="cloud-auth-error" className="cloud-auth-error" role="alert"><AlertCircle aria-hidden="true" /><span>{signInError}</span></p> : null}
-      </div> : null}
+  if (!user) return <main className="app-shell intake-shell"><AppHeader activeView="Scan" />
+    <section className="cloud-access" aria-label="Cloud account">
+      <p role="status">Returning to KingdomHaus Intelligence. Sign in from the homepage to open your workspace.</p>
+      <a href="/">KingdomHaus Home</a>
+    </section>
+  </main>;
+  return <main className="app-shell intake-shell"><AppHeader activeView="Scan" actions={accountAction} />
+    <section className="cloud-access" aria-label="Cloud account">
+      <p className="cloud-auth-error" role="alert"><AlertCircle aria-hidden="true" /><span>{error || "This account doesn't have access to Deal Scanner."}</span></p>
     </section>
   </main>;
 }
