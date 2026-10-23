@@ -1,0 +1,18 @@
+{
+  "hosting": {
+    "public": "dist/hosting",
+    "ignore": ["firebase.hosting.json", "**/.*", "**/node_modules/**"],
+    "headers": [
+      { "source": "**", "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "Cache-Control", "value": "no-store" }
+      ] }
+    ],
+    "rewrites": [
+      { "source": "/api", "run": { "serviceId": "kingdomhaus-api", "region": "us-central1", "pinTag": true } },
+      { "source": "/api/**", "run": { "serviceId": "kingdomhaus-api", "region": "us-central1", "pinTag": true } },
+      { "source": "**", "destination": "/workspace.html" }
+    ]
+  }
+}

@@ -52,7 +52,7 @@ If `OPENAI_API_KEY` is not set, scans run in rule-based mode. URL extraction, ma
 
 ## Hybrid BizBuySell Retrieval (Apify)
 
-Set `APIFY_API_TOKEN` in the server's `.env` (never a `VITE_` variable), `APIFY_MAX_CHARGE_USD` (default 0.25, valid range above 0 through 10 USD), and `APIFY_RUN_TIMEOUT_SECS` (default 180, range 30–600 seconds). Restart the API after configuration. The Actor may require an Apify plan with US Residential proxy access; verify current account access and pricing before a live test.
+Set `APIFY_API_TOKEN` in the server's `.env` (never a `VITE_` variable), `APIFY_MAX_CHARGE_USD` (explicit founder-approved value above 0 through 10 USD; no default), and `APIFY_RUN_TIMEOUT_SECS` (default 180, range 30–600 seconds). Restart the API after configuration. The Actor may require an Apify plan with US Residential proxy access; verify current account access and pricing before a live test.
 
 Use the existing **Scan from URL** action for a single BizBuySell business-opportunity URL. The application requests confirmation of the spending limit, then starts Actor `jUaA3ZUjFvx5NnFEb` with `fetchDetails: true`, `maxListings: 1`, and `maxPages: 1`. Apify's documented `maxTotalChargeUsd`, `maxItems: 1`, timeout, and `restartOnError: false` run options bound each run. No paid start is retried automatically. Read-only status requests never launch another run. Reported usage may be preliminary; confirm final billing in Apify.
 
@@ -60,7 +60,7 @@ The local API retains the run and dataset IDs, uses bearer authentication server
 
 Photographs are referenced from approved BizBuySell/LoopNet image hosts, with attribution and failure fallbacks. They are not downloaded, embedded in PDFs, or republished. Raw dataset rows remain in the live retrieval state, but durable saves/backups omit raw rows and image binaries while preserving approved image URLs and metadata. Normalized evidence, listing text, source metadata and conflicts are preserved. See [SAVE-RECOVERY.md](SAVE-RECOVERY.md).
 
-If retrieval fails, the URL and pasted text stay intact. Paste listing text and use **Scan business**. Editing the URL or text detaches the retrieval session. Request deduplication lasts for the current API process (maximum 100 sessions); before restarting the server or starting another run after an uncertain network failure, check the Apify console for an existing paid run. Closing the browser does not abort a run; its spending and time limits still apply. The API remains bound to loopback; paid requests are accepted only from the existing localhost:5173 / 127.0.0.1:5173 application origins. It is not a remotely authenticated service.
+If retrieval fails, the URL and pasted text stay intact. Paste listing text and use **Scan business**. Editing the URL or text detaches the retrieval session. Request deduplication lasts for the current API process (maximum 100 sessions); before restarting the server or starting another run after an uncertain network failure, check the Apify console for an existing paid run. Closing the browser does not abort a run; its spending and time limits still apply. The API remains bound to loopback; paid requests require a verified founder token and an allowed localhost / 127.0.0.1 application origin on port 5173 or 5176. Origin headers do not authenticate callers.
 
 Official references: [Actor input and output](https://apify.com/abotapi/bizbuysell-scraper), [Run Actor](https://docs.apify.com/api/v2/actors-runs-post), [Get run](https://docs.apify.com/api/v2/actor-run-get), [Dataset items](https://docs.apify.com/api/v2/dataset-items-get).
 
@@ -97,6 +97,10 @@ This is unencrypted browser-local storage, not authenticated cloud storage or sy
 
 ## Scripts
 
+The isolated Firebase foundation, synthetic emulator tests, founder setup instructions,
+and separately approved migration checklist are documented in [docs/FIREBASE-CLOUD.md](docs/FIREBASE-CLOUD.md).
+The original local workspace remains the default; no real acquisitions are migrated automatically.
+
 - `npm run dev` starts the Vite client and local API server.
 - `npm run test` runs calculation and validation tests.
 - `npm run build` type-checks and builds the client.
@@ -121,3 +125,7 @@ This is unencrypted browser-local storage, not authenticated cloud storage or sy
 ## Dedicated Project And Recovery
 
 Use the dedicated folder `C:\Users\brand\OneDrive\Documents\KingdomHaus Deal Scanner` for future development. The original folder was preserved during separation. See [RESTORE.md](RESTORE.md) for replacement-computer setup, secret handling, verification, and the proposed private GitHub workflow. The dedicated private repository is [shebuildskingdom83/kingdomhaus-deal-scanner](https://github.com/shebuildskingdom83/kingdomhaus-deal-scanner).
+
+## Founder-only API security (Phase A)
+
+All scanner API operations except minimal health/preflight now require a verified Firebase token and server-side founder authorization. Existing unauthenticated local API callers are no longer supported. The unified local website remains on port 5176. Before live use, review the required server-only Admin credentials, matching project/founder settings and explicitly approved paid-usage limits in [docs/API-SECURITY.md](docs/API-SECURITY.md). Missing configuration fails closed; no credentials, limits, founder data, Firestore rules or public-registration settings are changed automatically. Process-local quotas reset on restart and are not a durable billing ledger.

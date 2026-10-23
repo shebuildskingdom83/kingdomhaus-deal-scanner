@@ -1,0 +1,15 @@
+# Allowlist the API build inputs: no credentials, acquisitions, frontend snapshots, or Git data.
+**
+!package.json
+!package-lock.json
+!vite.server.config.ts
+!server/
+!server/**
+!src/
+!src/**
+**/.env*
+**/*.pem
+**/*.key
+**/credentials*
+**/service-account*
+**/*.map
