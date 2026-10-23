@@ -1,4 +1,4 @@
-import type { AcquisitionRecord, AcquisitionState, RecoveryDraft } from "./acquisitionRecord";
+import type { AcquisitionRecord, AcquisitionState, KhdaAnalysis, RecoveryDraft } from "./acquisitionRecord";
 import type { DealScan } from "./types";
 import { createCashFlowAssumptions } from "./acquisitionCashFlow";
 import { approvedBizBuySellUrl, safeListingImage } from "./hybridListing";
@@ -98,7 +98,22 @@ const cashRule = shape({
   startingMetric: choice(null, "sde", "ebitda", "advertisedCashFlow", "custom"),
   startingAmount: nullable(short), currentReviewed: boolean, improvementsReviewed: boolean, savingsBasis: choice("proposed", "verified")
 });
-const stateRule = shape({ scan: nullable(scanRule), form: formRule, cashFlow: cashRule });
+const founderDecisionRule = shape({
+  decision: choice(null, "Continue Reviewing", "Pursue", "Hold", "Pass"),
+  rationale: short,
+  nextDiligenceAction: short
+});
+const khdaSummaryText: Rule = value => { short(value); if (!(value as string).trim() || (value as string).length > 2000) fail(); };
+const khdaAnalysisRule = shape({
+  summary: shape(Object.fromEntries(["strategicFit", "attractiveCharacteristics", "sellerDependence", "equipmentContinuity", "financialQuestions", "majorRisks"].map(key => [key, khdaSummaryText]))),
+  completedAt: date,
+  model: value => { short(value); if (!(value as string).trim() || (value as string).length > 120) fail(); },
+  sourceScanId: id
+});
+export function validKhdaAnalysis(value: unknown): value is KhdaAnalysis {
+  try { khdaAnalysisRule(value); return true; } catch { return false; }
+}
+const stateRule = shape({ scan: nullable(scanRule), form: formRule, cashFlow: cashRule, founderDecision: optional(founderDecisionRule), khdaAnalysis: optional(khdaAnalysisRule) });
 const recordRule = shape({
   schemaVersion: choice(1), id, name, createdAt: date, updatedAt: date, revision,
   origin: choice("local", "imported", "legacy"), state: stateRule

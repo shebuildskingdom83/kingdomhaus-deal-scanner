@@ -458,6 +458,50 @@ fieldset > .section-note {
   color: #fffefa;
 }
 
+.founder-decision-panel {
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--gold);
+  border-radius: 8px;
+  background: #fffefa;
+}
+
+.founder-decision-intro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+}
+
+.founder-decision-intro h2 { margin: 0; }
+.founder-decision-status {
+  display: inline-block;
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #92949A;
+}
+.founder-decision-status[data-decision="Pursue"] { background: #4F9A70; }
+.founder-decision-status[data-decision="Hold"] { background: #D6A342; }
+.founder-decision-status[data-decision="Pass"] { background: #B95B5B; }
+.founder-decision-status[data-decision="Continue Reviewing"] { background: #558CCB; }
+.founder-decision-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.founder-decision-fields label { min-width: 0; }
+.founder-decision-fields label:first-child { grid-column: 1 / -1; }
+.founder-decision-fields select,
+.founder-decision-fields textarea { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #cfc4b2; border-radius: 8px; background: #fffefa; color: var(--ink); }
+.founder-decision-fields textarea { min-height: 76px; resize: vertical; }
+.founder-decision-fields small { display: inline; margin: 0; font-size: 0.85em; font-weight: 400; }
+
+@media (max-width: 760px) {
+  .founder-decision-fields { grid-template-columns: 1fr; }
+  .founder-decision-panel { padding: 16px; }
+}
+
 .metric p,
 .summary-question p,
 .risk-row p,
@@ -1299,6 +1343,7 @@ fieldset > .section-note {
 .acquisition-recovery button:hover:not(:disabled) { border-color:#9c7928; }
 .acquisition-recovery svg { width:17px; height:17px; flex-shrink:0; }
 .recovery-state { color:#5a5f68; font-size:.88rem; overflow-wrap:anywhere; }
+.recovery-draft-state { color:#6c7278; font-size:.8rem; overflow-wrap:anywhere; }
 .saved-acquisitions { margin-top:14px; }
 .saved-acquisitions>summary { display:flex; gap:8px; align-items:center; min-height:44px; cursor:pointer; color:#222746; font-weight:600; list-style:none; }
 .saved-acquisitions>summary::after { content:"+"; margin-left:auto; }
@@ -1327,7 +1372,6 @@ fieldset > .section-note {
  .rename-acquisition { width:100%; }
  .rename-acquisition label { width:100%; }
  .recovery-actions>button { flex:1 1 auto; }
- .recovery-state { flex-basis:100%; }
 }
 .recovery-dialog { width:min(480px,calc(100vw - 32px)); padding:24px; border:1px solid #b7aa8c; border-radius:8px; background:#fffefa; color:#222746; box-shadow:0 16px 56px #0003; }
 .recovery-dialog::backdrop { background:#11152599; }

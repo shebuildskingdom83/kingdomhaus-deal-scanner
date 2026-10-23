@@ -28,7 +28,7 @@ function controls(report = false): RecoveryControls {
   const record = syntheticLibrary(1)[0];
   const form = Object.fromEntries(Object.keys(record.state.form).map(key => [key, ""])) as typeof record.state.form;
   return { work: report ? record.state : { scan: null, form, cashFlow: createCashFlowAssumptions() },
-    records: [record], active: report ? record : null, generation: 0, dirty: false, hasWork: report,
+    records: [record], active: report ? record : null, generation: 0, dirty: false, hasWork: report, savePhase: "idle",
     storageError: "", actionError: "", notice: "", confirmation: null,
     setWork: vi.fn(), save: vi.fn(), open: vi.fn(), newScan: vi.fn(), rename: vi.fn(), remove: vi.fn(), importText: vi.fn(),
     exportCurrent: vi.fn(), exportRecord: vi.fn(), exportSavedCsv: vi.fn(), exportStoredRecovery: vi.fn(), reportError: vi.fn(),

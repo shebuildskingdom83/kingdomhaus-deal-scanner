@@ -1,5 +1,6 @@
 import type { DealScan } from "./types";
 import type { AcquisitionRecord } from "./acquisitionRecord";
+import { founderDecisionLabel, founderDecisionOf, type FounderDecision } from "./founderDecision";
 import { calculateAcquisitionCashFlow, createCashFlowAssumptions, currentCashFlowFields, improvementCashFlowFields, parseCashFlowInput } from "./acquisitionCashFlow";
 import type { CashFlowAssumptions } from "./acquisitionCashFlow";
 import { safeRatio } from "./financial";
@@ -10,8 +11,9 @@ import { resolvedStreetAddress } from "./listingAddress";
 type Cell = string | number | null;
 type Row = Record<string, Cell>;
 
-function summary(scan: DealScan, name: string, savedAt: string | null): Row {
+function summary(scan: DealScan, name: string, savedAt: string | null, founderDecision?: FounderDecision): Row {
   const f = scan.financials;
+  const founder = founderDecisionOf(founderDecision);
   const streetAddress = resolvedStreetAddress(scan);
   return {
     "Acquisition name": name,
@@ -49,6 +51,9 @@ function summary(scan: DealScan, name: string, savedAt: string | null): Row {
     "Material risk flags": scan.riskChecks.filter(risk => risk.status !== "clear" || risk.requiresVerification).map(risk => risk.label + ": " + risk.explanation).join("\n"),
     "Financial verification status": "Not independently verified; seller claims and user corrections require diligence",
     "Preliminary recommendation (not approval)": scan.decision.recommendation,
+    "Founder Decision": founderDecisionLabel(founder),
+    "Founder rationale": founder.rationale,
+    "Next diligence action": founder.nextDiligenceAction,
     "Saved date": savedAt,
     "Report generation date": scan.createdAt
   };
@@ -67,9 +72,9 @@ export function encodeCsv(rows: Row[], columns = Object.keys(rows[0] ?? {})): st
   return "\uFEFF" + [columns.map(cell).join(","), ...rows.map(row => columns.map(key => cell(row[key] ?? null)).join(","))].join("\r\n") + "\r\n";
 }
 
-export function buildCurrentAcquisitionCsv(scan: DealScan, assumptions = createCashFlowAssumptions()): string {
+export function buildCurrentAcquisitionCsv(scan: DealScan, assumptions = createCashFlowAssumptions(), founderDecision?: FounderDecision): string {
   const result = calculateAcquisitionCashFlow(scan.financials, assumptions);
-  const row = summary(scan, scan.overview.businessName.value ?? "Not Disclosed", null);
+  const row = summary(scan, scan.overview.businessName.value ?? "Not Disclosed", null, founderDecision);
   Object.assign(row, {
     "Current Operations starting metric": result.starting.label,
     "Current Operations starting source": result.starting.source,
@@ -94,7 +99,7 @@ export function buildCurrentAcquisitionCsv(scan: DealScan, assumptions = createC
 }
 
 export function buildSavedAcquisitionsCsv(records: AcquisitionRecord[]): string {
-  const rows = records.map(record => ({ ...summary(record.state.scan, record.name, record.createdAt), "Last updated": record.updatedAt }));
+  const rows = records.map(record => ({ ...summary(record.state.scan, record.name, record.createdAt, record.state.founderDecision), "Last updated": record.updatedAt }));
   return encodeCsv(rows);
 }
 

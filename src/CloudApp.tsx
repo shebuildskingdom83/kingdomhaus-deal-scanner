@@ -60,7 +60,7 @@ function CloudAccess() {
   const authorized = Boolean(workspace?.active);
   const accountAction = user ? <>
     <button type="button" className="ghost-button cloud-header-action" onClick={async () => {
-      if (!window.confirm("Sign out and clear this session's acquisition view? Unsaved edits held in memory will be lost. Wait for Saved or export first.")) return;
+      if (!window.confirm("Sign out and clear this session's acquisition view? Unsaved edits may be lost. Save Changes to the acquisition or export your work first.")) return;
       currentWorkspace.current?.close(); currentWorkspace.current = null; setWorkspace(null); setSigningOut(true); setError("");
       const auth = cloudClient().auth;
       try {
@@ -113,7 +113,7 @@ function CloudWorkspace({ accountAction, onReload, workspace }: { accountAction:
   if (!recovery.cloud?.ready) return <main className="app-shell intake-shell"><AppHeader activeView="Scan" actions={actions} /><section className="cloud-access portfolio-loading" aria-label="Cloud recovery" aria-busy={recovery.cloud?.status === "Saving"}>
     <p className="eyebrow">Acquisition Portfolio</p>
     <h2>{recovery.storageError ? "Your portfolio could not be loaded" : "Opening your portfolio"}</h2>
-    <p role="status">{recovery.cloud?.status}: {recovery.storageError || "Loading cloud acquisitions and workspace..."}</p>
+    <p role="status">{recovery.storageError || "Loading cloud acquisitions and workspace..."}</p>
     <button type="button" onClick={recovery.cloud?.retry}>Retry cloud recovery</button>
   </section></main>;
   return <AcquisitionWorkspace recovery={recovery} headerActions={actions} />;

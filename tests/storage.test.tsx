@@ -50,7 +50,7 @@ describe("versioned browser acquisition repository", () => {
     expect(html).toContain("Privacy and recovery");
     expect(html).not.toContain("<details open");
     expect(html).toMatch(/type="file"[^>]*hidden=""/);
-    expect(html).toContain("Save acquisition");
+    expect(html).toContain("Save Acquisition");
   });
   it("saves complete evidence, corrections, review states and both scenario assumptions across repository restart", () => {
     const { store, repo, record } = setup();

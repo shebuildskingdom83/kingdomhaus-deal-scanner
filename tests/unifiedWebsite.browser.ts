@@ -304,7 +304,7 @@ try {
     await page.setViewportSize({ width, height: 900 }); await noOverflow();
     assert.equal(await page.locator(".portfolio-metric").count(), 3);
     assert.equal(await page.locator(".portfolio-metric-value > dd").first().textContent(), "$123,456,789");
-    assert.equal(await page.locator(".portfolio-metric").nth(2).locator("dd").first().textContent(), "Not tracked");
+    assert.equal(await page.locator(".portfolio-metric").nth(2).locator("dd").first().textContent(), "0");
     const boxes = await page.locator(".portfolio-metric").evaluateAll((elements: Element[]) => elements.map(element => {
       const box = element.getBoundingClientRect(); return { width: box.width, height: box.height, x: box.x, y: box.y };
     }));

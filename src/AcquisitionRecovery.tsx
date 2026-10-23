@@ -35,19 +35,20 @@ export function AcquisitionRecovery({ recovery, busy = false, presentation = "sc
   }, [recovery.confirmation]);
   const disabled = busy || importing || Boolean(recovery.cloud && (!recovery.cloud.ready || recovery.cloud.busy));
   const portfolio = presentation === "workspace";
-  const unsaved = recovery.dirty ? recovery.cloud
-    ? portfolio ? "Draft changes are separate from saved opportunities" : "Changes not saved to this acquisition"
-    : "Changes not saved to a record" : "";
-  const stateMessage = recovery.cloud
-    ? recovery.cloud.status === "Saved" ? unsaved : `${recovery.cloud.status}${unsaved ? " · " + unsaved : ""}`
-    : unsaved || (recovery.active ? recovery.active.name : "Browser-local workspace");
+  const stateMessage = recovery.savePhase === "saving" ? "Saving..."
+    : recovery.savePhase === "failed" ? "Unable to save"
+    : recovery.dirty ? "Unsaved changes"
+    : recovery.active ? "Saved" : "";
+  const draftMessage = !recovery.cloud?.ready ? ""
+    : recovery.cloud.status === "Offline" ? "Recovery draft unavailable offline."
+    : recovery.cloud.status === "Error" ? "Unable to protect recovery draft."
+    : "";
   const retrySave = recovery.cloud && (recovery.cloud.status === "Error" || recovery.cloud.status === "Offline");
   const showSave = presentation === "scanner" && Boolean(recovery.work.scan);
   const completedMessage = completedRecoveryMessage(recovery.notice, Boolean(recovery.cloud));
-  const successVisible = completedMessage && !busy && !recovery.cloud?.busy && !recovery.storageError && !recovery.actionError &&
-    (recovery.notice !== "Acquisition saved." || (!recovery.dirty && (!recovery.cloud || recovery.cloud.status === "Saved")));
-  const persistentNotice = !completedMessage && !["Cloud acquisition reopened.", "Previous work restored."].includes(recovery.notice) ? recovery.notice : "";
-  return <section className="acquisition-recovery" aria-label="Acquisition saving and recovery">
+  const successVisible = completedMessage && !busy && !recovery.cloud?.busy && !recovery.storageError && !recovery.actionError;
+  const persistentNotice = !completedMessage && !["Acquisition saved.", "Cloud acquisition reopened.", "Previous work restored."].includes(recovery.notice) ? recovery.notice : "";
+  return <section className="acquisition-recovery" aria-label="Acquisition saving and recovery" data-draft-status={recovery.cloud?.status}>
     <dialog ref={dialog} className="recovery-dialog" role="alertdialog" aria-labelledby="recovery-dialog-title" aria-describedby="recovery-dialog-description"
       onCancel={event => { event.preventDefault(); recovery.cancelConfirmation(); }}>
       <h2 id="recovery-dialog-title">Confirm acquisition change</h2>
@@ -70,12 +71,13 @@ export function AcquisitionRecovery({ recovery, busy = false, presentation = "sc
           } catch (error) { recovery.reportError(error instanceof Error ? error.message : "The backup could not be read."); }
           finally { setImporting(false); }
         }} />
-    {showSave || stateMessage || retrySave ? <div className={portfolio ? "recovery-actions portfolio-save-state" : "recovery-actions"}>
+    {showSave || stateMessage || draftMessage || retrySave ? <div className={portfolio ? "recovery-actions portfolio-save-state" : "recovery-actions"}>
       {showSave ? <button type="button" className="primary-action" onClick={recovery.save} disabled={disabled}>
-        <Save aria-hidden="true" />{recovery.active ? "Update saved scan" : "Save acquisition"}
+        <Save aria-hidden="true" />{recovery.active ? "Save Changes" : "Save Acquisition"}
       </button> : null}
       {stateMessage ? <span className="recovery-state" role="status">{stateMessage}</span> : null}
-      {retrySave ? <button type="button" onClick={recovery.cloud?.retry}>Retry cloud save</button> : null}
+      {draftMessage ? <span className="recovery-draft-state" role="status">{draftMessage}</span> : null}
+      {retrySave ? <button type="button" onClick={recovery.cloud?.retry}>Retry recovery draft</button> : null}
     </div> : null}
     <details className="saved-acquisitions" open={presentation === "workspace" ? true : undefined}>
       <summary>{portfolio ? <h3>Your Opportunities</h3> : <><FolderOpen aria-hidden="true" />Saved scans <span>({recovery.records.length})</span></>}</summary>

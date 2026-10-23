@@ -1,5 +1,6 @@
 import type { AcquisitionRecord } from "./acquisitionRecord";
 import { matchingRecord } from "./storage";
+import { validKhdaAnalysis } from "./recordValidation";
 
 /** Read-only presentation of saved asking prices, including saved corrections. */
 export function savedAskingPrice(record: AcquisitionRecord): number | null {
@@ -23,6 +24,7 @@ export function portfolioOverview(records: readonly AcquisitionRecord[]) {
   return {
     opportunities: unique.length,
     duplicates: records.length - unique.length,
+    khdaAnalyses: groups.filter(group => group.some(record => validKhdaAnalysis(record.state.khdaAnalysis))).length,
     disclosed: prices.length,
     askingValue: prices.length && Number.isFinite(total) && total <= Number.MAX_SAFE_INTEGER ? total : null
   };

@@ -57,7 +57,7 @@ describe("Acquisition Workspace with a synthetic cloud repository", () => {
   it("does not mistake persisted AI-assisted scan provenance for completed KHDA runs", async () => {
     const t = fixture(1, false, true); await loaded();
     const metric = screen.getByText("KHDA Analyses").closest(".portfolio-metric")!;
-    expect(within(metric as HTMLElement).getByText("Not tracked")).toBeTruthy();
+    expect(within(metric as HTMLElement).getByText("0")).toBeTruthy();
     expect(t.records).toEqual(t.originalRecords); expect(t.repo.save).not.toHaveBeenCalled(); expect(t.repo.saveDraft).not.toHaveBeenCalled();
   });
   it.each([0, 3])("shows an honest KHDA fallback alongside unchanged portfolio totals (saved=%s)", async count => {
@@ -68,8 +68,8 @@ describe("Acquisition Workspace with a synthetic cloud repository", () => {
     expect(metrics[0].querySelector("dd")!.textContent).toBe(String(count));
     expect(metrics[1].querySelector("dd")!.textContent).toBe(count ? "$369,000" : "Not Disclosed");
     expect(metrics[2].querySelector("dt")!.textContent).toBe("KHDA Analyses");
-    expect(metrics[2].querySelector("dd")!.textContent).toBe("Not tracked");
-    expect(metrics[2].textContent).toContain("Completed AI analyses");
+    expect(metrics[2].querySelector("dd")!.textContent).toBe("0");
+    expect(metrics[2].textContent).toContain("Unique saved opportunities with a completed KHDA analysis");
     expect(t.records).toEqual(t.originalRecords); expect(t.repo.save).not.toHaveBeenCalled(); expect(t.repo.saveDraft).not.toHaveBeenCalled();
   });
   it("lands on home with explicit analysis actions and preserves the recovered draft without writes", async () => {

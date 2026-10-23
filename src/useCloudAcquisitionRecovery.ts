@@ -1,24 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import type { AcquisitionForm, AcquisitionRecord, AcquisitionState } from "./acquisitionRecord";
 import { createCashFlowAssumptions } from "./acquisitionCashFlow";
+import { createFounderDecision } from "./founderDecision";
 import { DraftAutosaver } from "./cloudPersistence";
 import type { CloudRepository, CloudStatus } from "./cloudPersistence";
 import { downloadBackup, makeRecord, matchingRecord, parseBackup } from "./storage";
 import { buildSavedAcquisitionsCsv, downloadCsv } from "./csv";
 import type { RecoveryControls } from "./useAcquisitionRecovery";
+import type { AcquisitionSavePhase } from "./useAcquisitionRecovery";
 import { completedRecoveryMessage, RECOVERY_FEEDBACK_DURATION_MS } from "./recoveryFeedback";
 import { WorkspaceChangedError, type WorkspaceSession } from "./workspaceSession";
 
 const messageOf = (error: unknown) => error instanceof Error ? error.message : "Cloud operation failed. Your open work remains in memory.";
 
 export function useCloudAcquisitionRecovery(repository: CloudRepository, initialForm: AcquisitionForm, session?: WorkspaceSession): RecoveryControls {
-  const blank = (): AcquisitionState => ({ scan: null, form: { ...initialForm }, cashFlow: createCashFlowAssumptions() });
+  const blank = (): AcquisitionState => ({ scan: null, form: { ...initialForm }, cashFlow: createCashFlowAssumptions(), founderDecision: createFounderDecision() });
   const [work, setWork] = useState(blank);
   const [records, setRecords] = useState<AcquisitionRecord[]>([]);
   const [active, setActive] = useState<AcquisitionRecord | null>(null);
   const [generation, setGeneration] = useState(0);
   const [storageError, setStorageError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [savePhase, setSavePhase] = useState<AcquisitionSavePhase>("idle");
   const [notice, setNotice] = useState("");
   const [status, setStatus] = useState<CloudStatus>("Saving");
   const [ready, setReady] = useState(false);
@@ -40,14 +43,10 @@ export function useCloudAcquisitionRecovery(repository: CloudRepository, initial
   const confirm = (message: string, accept: () => void) => setConfirmation({ message, accept });
 
   useEffect(() => {
-    if (!completedRecoveryMessage(notice, true)) return;
-    if (notice === "Acquisition saved.") {
-      if (dirty || storageError || actionError) { setNotice(""); return; }
-      if (busy || status !== "Saved") return;
-    }
+    if (!completedRecoveryMessage(notice, true) && notice !== "Acquisition saved.") return;
     const timer = window.setTimeout(() => setNotice(""), RECOVERY_FEEDBACK_DURATION_MS);
     return () => window.clearTimeout(timer);
-  }, [notice, dirty, storageError, actionError, busy, status]);
+  }, [notice]);
 
   useEffect(() => {
     let live = true;
@@ -100,9 +99,10 @@ export function useCloudAcquisitionRecovery(repository: CloudRepository, initial
     return () => { window.removeEventListener("online", online); window.removeEventListener("offline", offline); window.removeEventListener("beforeunload", leaving); };
   }, [hasWork, ready, busy]);
 
-  async function attempt(action: () => Promise<void>) {
+  async function attempt(action: () => Promise<void>, savingAcquisition = false) {
     if (operation.current) return;
     operationStart.current = workRef.current;
+    if (savingAcquisition) setSavePhase("saving");
     operation.current = true; setBusy(true); setActionError(""); setNotice("");
     try {
       check();
@@ -112,14 +112,14 @@ export function useCloudAcquisitionRecovery(repository: CloudRepository, initial
       check();
       if (autosaver.current?.unsaved) throw new Error("Your cloud draft has not been saved. Resolve the save error before changing records.");
       await action();
-    } catch (error) { if (mounted.current) { setActionError(messageOf(error)); setStatus(navigator.onLine ? "Error" : "Offline"); } }
+    } catch (error) { if (mounted.current) { setActionError(messageOf(error)); if (savingAcquisition) setSavePhase("failed"); } }
     finally { operation.current = false; if (mounted.current) setBusy(false); }
   }
   const guardEdits = () => {
     check();
     if (workRef.current !== operationStart.current) throw new Error("Your open work changed while this operation was loading. It was not replaced. Try again when ready.");
   };
-  const replaceWork = (record: AcquisitionRecord) => { guardEdits(); setWork(structuredClone(record.state)); setActive(record); setGeneration(value => value + 1); };
+  const replaceWork = (record: AcquisitionRecord) => { guardEdits(); setWork(structuredClone(record.state)); setActive(record); setSavePhase("idle"); setGeneration(value => value + 1); };
   const upsert = (record: AcquisitionRecord) => { check(); setRecords(current => [record, ...current.filter(item => item.id !== record.id)]); };
   function save() {
     try {
@@ -128,18 +128,18 @@ export function useCloudAcquisitionRecovery(repository: CloudRepository, initial
       const persist = () => { void attempt(async () => {
         const record = makeRecord(work, previous?.name, previous);
         await repository.save(record, previous?.revision ?? null);
-        upsert(record); setActive(record); setNotice("Acquisition saved.");
-      }); };
-      if (previous) confirm('Replace the saved version of "' + previous.name + '" with this analysis and its assumptions?', persist);
+        upsert(record); setActive(record); setSavePhase("idle"); setNotice("Acquisition saved.");
+      }, true); };
+      if (previous) confirm('Save the current analysis, Founder Decision, and other changes to "' + previous.name + '"?', persist);
       else persist();
-    } catch (error) { setActionError(messageOf(error)); }
+    } catch (error) { setActionError(messageOf(error)); setSavePhase("failed"); }
   }
   function open(record: AcquisitionRecord) {
     const restore = () => { void attempt(async () => { replaceWork(await repository.get(record.id)); }); };
     if (dirty) confirm("Replace your open work with this acquisition? Save or export changes you want to keep first.", restore); else restore();
   }
   function newScan() {
-    const reset = () => { void attempt(async () => { guardEdits(); setWork(blank()); setActive(null); setGeneration(value => value + 1); }); };
+    const reset = () => { void attempt(async () => { guardEdits(); setWork(blank()); setActive(null); setSavePhase("idle"); setGeneration(value => value + 1); }); };
     if (dirty) confirm("Start a new scan and replace the current cloud draft? Save or export first to keep it.", reset); else reset();
   }
   function rename(record: AcquisitionRecord, name: string) {
@@ -177,10 +177,10 @@ export function useCloudAcquisitionRecovery(repository: CloudRepository, initial
   }
   function exportAction(action: () => void) { try { check(); action(); } catch (error) { if (mounted.current) setActionError(messageOf(error)); } }
   const updateWork: typeof setWork = update => {
-    try { check(); setWork(current => session && !session.active ? current : typeof update === "function" ? update(current) : update); }
+    try { check(); setSavePhase("idle"); setWork(current => session && !session.active ? current : typeof update === "function" ? update(current) : update); }
     catch { /* An old account's component cannot update a replacement workspace. */ }
   };
-  return { work, setWork: updateWork, session, records, active, generation, dirty, hasWork, storageError, actionError, notice,
+  return { work, setWork: updateWork, session, savePhase, records, active, generation, dirty, hasWork, storageError, actionError, notice,
     save, open, newScan, rename, remove, importText,
     exportCurrent: () => exportAction(() => downloadBackup(makeRecord(work, active?.name, active ?? undefined))),
     exportRecord: record => exportAction(() => downloadBackup(record)),

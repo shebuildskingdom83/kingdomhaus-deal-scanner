@@ -62,9 +62,8 @@ export function AcquisitionWorkspace({ recovery, headerActions }: { recovery: Re
         </div>
         <div className="portfolio-metric">
           <dt>KHDA Analyses</dt>
-          {/* Saved records contain no completed KHDA run ledger; session-only AI results cannot establish a count. */}
-          <dd>Not tracked</dd>
-          <dd className="portfolio-metric-note">Completed AI analyses</dd>
+          <dd>{overview.khdaAnalyses.toLocaleString("en-US")}</dd>
+          <dd className="portfolio-metric-note">Unique saved opportunities with a completed KHDA analysis</dd>
         </div>
       </dl>
       <p className="portfolio-provenance">{overview.askingValue !== null

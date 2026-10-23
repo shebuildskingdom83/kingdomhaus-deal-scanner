@@ -55,6 +55,21 @@ describe("private workspace integration using synthetic SDK accounts and records
     expect(store("synthetic-pilot")).toEqual({ records: [], draft: null, revision: 0 });
     expect(fetch).not.toHaveBeenCalled();
   });
+  it("counts a saved founder KHDA result only in the founder workspace after account switching", async () => {
+    const record = store("synthetic-founder").records[0];
+    record.state.khdaAnalysis = { sourceScanId: record.state.scan.id, completedAt: "2026-10-23T12:00:00.000Z", model: "synthetic-model",
+      summary: { strategicFit: "Founder-only analysis", attractiveCharacteristics: "Synthetic strengths",
+        sellerDependence: "Synthetic dependence", equipmentContinuity: "Synthetic equipment",
+        financialQuestions: "Synthetic questions", majorRisks: "Synthetic risks" } };
+    render(<CloudApp />);
+    const founderMetric = (await screen.findByText("KHDA Analyses")).closest(".portfolio-metric")!;
+    expect(founderMetric.querySelector("dd")?.textContent).toBe("1");
+    switchAccount(account("synthetic-pilot", true));
+    const pilotMetric = (await screen.findByText("KHDA Analyses")).closest(".portfolio-metric")!;
+    expect(pilotMetric.querySelector("dd")?.textContent).toBe("0");
+    expect(screen.queryByText("Founder-only analysis")).toBeNull();
+    expect(store("synthetic-pilot").records).toEqual([]);
+  });
   it("denies unapproved accounts and discards a delayed pilot-claim result after another account is selected", async () => {
     let finish!: (value: { claims: Record<string, unknown> }) => void;
     const pilot = account("synthetic-pilot"); pilot.getIdTokenResult = () => new Promise(done => { finish = done; });
@@ -94,6 +109,23 @@ describe("private workspace integration using synthetic SDK accounts and records
     expect(screen.queryByRole("button", { name: "Confirm and analyze" })).toBeNull();
     expect(state.puter).not.toHaveBeenCalled(); expect(fetch).not.toHaveBeenCalled();
   });
+  it("clears a previous account's Founder Decision before opening another private report", async () => {
+    const founder = syntheticLibrary(1)[0];
+    const pilot = syntheticLibrary(1)[0];
+    founder.state.founderDecision = { decision: "Pass", rationale: "Founder-only synthetic rationale", nextDiligenceAction: "" };
+    pilot.state.founderDecision = { decision: "Continue Reviewing", rationale: "Pilot-only synthetic rationale", nextDiligenceAction: "" };
+    store("synthetic-founder").draft = { recordId: null, recordRevision: null, state: founder.state };
+    store("synthetic-pilot").draft = { recordId: null, recordRevision: null, state: pilot.state };
+    render(<CloudApp />);
+    fireEvent.click(await screen.findByRole("button", { name: /Continue Analysis/ }));
+    expect((screen.getByLabelText(/Reason for Decision/) as HTMLTextAreaElement).value).toBe("Founder-only synthetic rationale");
+    switchAccount(account("synthetic-pilot", true));
+    expect(screen.queryByText("Founder-only synthetic rationale")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: /Continue Analysis/ }));
+    expect((screen.getByLabelText(/Reason for Decision/) as HTMLTextAreaElement).value).toBe("Pilot-only synthetic rationale");
+    expect((screen.getByLabelText("Decision") as HTMLSelectElement).value).toBe("Continue Reviewing");
+    expect(store("synthetic-pilot").draft?.state.founderDecision?.rationale).toBe("Pilot-only synthetic rationale");
+  });
   it("discards founder Puter results after an account switch", async () => {
     const record = syntheticLibrary(1)[0]; store("synthetic-founder").draft = { recordId: null, recordRevision: null, state: record.state };
     let finish!: (value: unknown) => void; state.puter.mockImplementationOnce(() => new Promise(done => { finish = done; }));
@@ -101,8 +133,13 @@ describe("private workspace integration using synthetic SDK accounts and records
     fireEvent.click(screen.getByRole("button", { name: /Analyze Deal/ })); fireEvent.click(screen.getByRole("button", { name: "Confirm and analyze" }));
     expect(state.puter).toHaveBeenCalledTimes(1);
     switchAccount(account("synthetic-pilot", true)); await screen.findByRole("heading", { name: "Build your acquisition portfolio" });
-    await act(async () => { finish({ summary: { strategicFit: "Founder-private analysis" } }); });
+    await act(async () => { finish({ model: "synthetic-model", rawText: "Synthetic provider response", summary: {
+      strategicFit: "Founder-private analysis", attractiveCharacteristics: "Synthetic strengths",
+      sellerDependence: "Synthetic dependence", equipmentContinuity: "Synthetic equipment",
+      financialQuestions: "Synthetic questions", majorRisks: "Synthetic risks"
+    } }); });
     expect(screen.queryByText("Founder-private analysis")).toBeNull();
+    expect(store("synthetic-pilot").draft?.state.khdaAnalysis).toBeUndefined();
   });
   it("aborts scanning on account switch and discards the former account's delayed HTTP result", async () => {
     state.user = account("synthetic-pilot", true);

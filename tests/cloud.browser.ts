@@ -44,7 +44,7 @@ const page = await context.newPage();
 page.on("download", () => downloads++);
 const cloudSettled = async (target = page) => {
   await target.locator(".acquisition-recovery").waitFor();
-  await target.locator(".recovery-state").filter({ hasText: /^(Saving|Offline|Error)/ }).waitFor({ state: "hidden" });
+  await target.locator('.acquisition-recovery[data-draft-status="Saved"]').waitFor();
 };
 const signIn = async (target = page) => {
   await target.goto(base + "/cloud");
@@ -137,7 +137,7 @@ try {
   await page.locator("summary").filter({ hasText: "Review or correct extracted values" }).click();
   await context.setOffline(true);
   await page.getByLabel("Business name", { exact: true }).fill("Synthetic offline draft correction");
-  await page.locator(".recovery-state").filter({ hasText: /^Offline/ }).waitFor();
+  await page.locator('.acquisition-recovery[data-draft-status="Offline"]').waitFor();
   await new Promise(resolve => setTimeout(resolve, 1500));
   assert.equal((await repo.loadDraft()).revision, beforeOffline.revision);
   await context.setOffline(false);
@@ -149,7 +149,7 @@ try {
   otherDraft.state.form.businessName = "Synthetic competing cloud edit";
   await repo.saveDraft(otherDraft, beforeConflict.revision);
   await page.getByLabel("Business name", { exact: true }).fill("Synthetic pending conflict edit");
-  await page.locator(".recovery-state").filter({ hasText: /^Error/ }).waitFor();
+  await page.locator('.acquisition-recovery[data-draft-status="Error"]').waitFor();
   const reload = page.getByRole("button", { name: "Reload cloud workspace", exact: true });
   assert.equal(await reload.count(), 1);
   page.once("dialog", (dialog: any) => dialog.dismiss()); await reload.click();

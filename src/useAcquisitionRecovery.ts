@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { AcquisitionForm, AcquisitionRecord, AcquisitionState } from "./acquisitionRecord";
 import { createCashFlowAssumptions } from "./acquisitionCashFlow";
+import { createFounderDecision } from "./founderDecision";
 import { AcquisitionRepository, downloadBackup, makeRecord, matchingRecord, parseBackup, storageKey } from "./storage";
 import { retainedScan } from "./recordValidation";
 import { buildSavedAcquisitionsCsv, downloadCsv } from "./csv";
@@ -11,6 +12,7 @@ export type RecoveryControls = ReturnType<typeof useAcquisitionRecovery> & {
   session?: WorkspaceSession;
   cloud?: { status: CloudStatus; ready: boolean; busy: boolean; retry: () => void };
 };
+export type AcquisitionSavePhase = "idle" | "saving" | "failed";
 
 const messageOf = (error: unknown) => error instanceof Error ? error.message : "Saved work could not be updated.";
 const snapshot = (work: AcquisitionState) => JSON.stringify({ ...work, scan: work.scan ? retainedScan(work.scan) : null });
@@ -21,13 +23,14 @@ export function useAcquisitionRecovery(initialForm: AcquisitionForm) {
     try { return { library: repository.load(), error: "" }; }
     catch (error) { return { library: null, error: messageOf(error) }; }
   });
-  const blank = (): AcquisitionState => ({ scan: null, form: { ...initialForm }, cashFlow: createCashFlowAssumptions() });
+  const blank = (): AcquisitionState => ({ scan: null, form: { ...initialForm }, cashFlow: createCashFlowAssumptions(), founderDecision: createFounderDecision() });
   const [work, setWork] = useState<AcquisitionState>(() => initial.library?.draft?.state ?? blank());
   const [records, setRecords] = useState(initial.library?.records ?? []);
   const [active, setActive] = useState<AcquisitionRecord | null>(() => initial.library?.records.find(r => r.id === initial.library?.draft?.recordId) ?? null);
   const [generation, setGeneration] = useState(0);
   const [storageError, setStorageError] = useState(initial.error);
   const [actionError, setActionError] = useState("");
+  const [savePhase, setSavePhase] = useState<AcquisitionSavePhase>("idle");
   const [notice, setNotice] = useState(initial.library?.notice ?? (initial.library?.draft ? "Previous work restored." : ""));
   useEffect(() => {
     if (!notice) return;
@@ -59,28 +62,29 @@ export function useAcquisitionRecovery(initialForm: AcquisitionForm) {
     return () => { window.removeEventListener("storage", changed); window.removeEventListener("beforeunload", leaving); };
   }, [dirty, storageError, hasWork]);
 
-  const attempt = (action: () => void) => {
+  const attempt = (action: () => void, onError?: () => void) => {
     setActionError("");
     setNotice("");
-    try { action(); } catch (error) { setActionError(messageOf(error)); }
+    try { action(); } catch (error) { setActionError(messageOf(error)); onError?.(); }
   };
   function save() {
     attempt(() => {
       const candidate = makeRecord(work);
       const previous = active ?? matchingRecord(records, candidate);
       const persist = () => attempt(() => {
+        setSavePhase("saving");
         const record = makeRecord(work, previous?.name, previous);
         const library = repository.save(record, previous?.revision ?? null, Boolean(previous));
-        setRecords(library.records); setActive(record); setNotice("Acquisition saved.");
-      });
-      if (previous) confirm('Replace the saved version of "' + previous.name + '" with this analysis and its assumptions?', persist);
+        setRecords(library.records); setActive(record); setSavePhase("idle"); setNotice("Acquisition saved.");
+      }, () => setSavePhase("failed"));
+      if (previous) confirm('Save the current analysis, Founder Decision, and other changes to "' + previous.name + '"?', persist);
       else persist();
-    });
+    }, () => setSavePhase("failed"));
   }
   function open(record: AcquisitionRecord) {
     attempt(() => {
       const restore = () => {
-        setWork(structuredClone(record.state)); setActive(record); setGeneration(n => n + 1);
+        setWork(structuredClone(record.state)); setActive(record); setSavePhase("idle"); setGeneration(n => n + 1);
         setNotice("Previous work restored.");
       };
       if (dirty || storageError) confirm("Replace your open work with this saved acquisition? Export any changes you want to keep first.", restore);
@@ -89,7 +93,7 @@ export function useAcquisitionRecovery(initialForm: AcquisitionForm) {
   }
   function newScan() {
     attempt(() => {
-      const reset = () => { setWork(blank()); setActive(null); setGeneration(n => n + 1); setNotice(""); };
+      const reset = () => { setWork(blank()); setActive(null); setSavePhase("idle"); setGeneration(n => n + 1); setNotice(""); };
       if (dirty || storageError) confirm("Start a new scan and discard your open changes? Save or export first to keep them.", reset);
       else reset();
     });
@@ -137,7 +141,8 @@ export function useAcquisitionRecovery(initialForm: AcquisitionForm) {
   function exportRecord(record: AcquisitionRecord) { attempt(() => { downloadBackup(record); setNotice("Backup exported."); }); }
   function exportSavedCsv() { attempt(() => { downloadCsv(buildSavedAcquisitionsCsv(records), "kingdomhaus-saved-acquisitions.csv"); setNotice("CSV exported."); }); }
   function exportStoredRecovery() { attempt(() => repository.exportStoredRecovery()); }
-  return { work, setWork, records, active, generation, dirty, hasWork, storageError, actionError, notice,
+  const updateWork: typeof setWork = update => { setSavePhase("idle"); setWork(update); };
+  return { work, setWork: updateWork, savePhase, records, active, generation, dirty, hasWork, storageError, actionError, notice,
     save, open, newScan, rename, remove, importText, exportCurrent, exportRecord, exportSavedCsv, exportStoredRecovery, reportError: (message: string) => { setNotice(""); setActionError(message); },
     confirmation, cancelConfirmation: () => setConfirmation(null),
     acceptConfirmation: () => { const request = confirmation; setConfirmation(null); if (request) attempt(request.accept); } };

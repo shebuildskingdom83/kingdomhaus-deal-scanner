@@ -1,5 +1,14 @@
 import type { DealScan } from "./types";
 import type { CashFlowAssumptions } from "./acquisitionCashFlow";
+import type { FounderDecision } from "./founderDecision";
+import type { PuterDealClaritySummary } from "./puterPoc";
+
+export type KhdaAnalysis = {
+  summary: PuterDealClaritySummary;
+  completedAt: string;
+  model: string;
+  sourceScanId: string;
+};
 
 export type AcquisitionForm = {
   streetAddress?: string;
@@ -9,7 +18,7 @@ export type AcquisitionForm = {
   advertisedCashFlow: string; inventory: string; ffe: string; realEstate: string;
 };
 
-export type AcquisitionState = { scan: DealScan | null; form: AcquisitionForm; cashFlow: CashFlowAssumptions };
+export type AcquisitionState = { scan: DealScan | null; form: AcquisitionForm; cashFlow: CashFlowAssumptions; founderDecision?: FounderDecision; khdaAnalysis?: KhdaAnalysis };
 export type AcquisitionRecord = {
   schemaVersion: 1; id: string; name: string; createdAt: string; updatedAt: string; revision: number;
   origin: "local" | "imported" | "legacy";

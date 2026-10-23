@@ -5,14 +5,15 @@ import { safeBusinessWebsite } from "./safeExternalUrl";
 import { hydrateStreetAddress } from "./listingAddress";
 import { calculateAcquisitionCashFlow, cashFlowDisclaimer, currentCashFlowFields, formatCashFlowMoney, improvementCashFlowFields, parseCashFlowInput } from "./acquisitionCashFlow";
 import type { CashFlowAssumptions } from "./acquisitionCashFlow";
+import { founderDecisionLabel, founderDecisionOf, type FounderDecision } from "./founderDecision";
 
 const pageWidth = 612;
 const pageHeight = 792;
 const margin = 54;
 const lineHeight = 15;
 
-export function downloadScanPdf(scan: DealScan, assumptions?: CashFlowAssumptions) {
-  const lines = buildReportLines(scan, assumptions);
+export function downloadScanPdf(scan: DealScan, assumptions?: CashFlowAssumptions, founderDecision?: FounderDecision) {
+  const lines = buildReportLines(scan, assumptions, founderDecision);
   const chunks = paginate(lines, 43);
   const objects: string[] = [];
 
@@ -45,9 +46,10 @@ export function downloadScanPdf(scan: DealScan, assumptions?: CashFlowAssumption
   URL.revokeObjectURL(url);
 }
 
-export function buildReportLines(scan: DealScan, assumptions?: CashFlowAssumptions): string[] {
+export function buildReportLines(scan: DealScan, assumptions?: CashFlowAssumptions, founderDecision?: FounderDecision): string[] {
   scan = hydrateStreetAddress(scan);
   const f = scan.financials;
+  const founder = founderDecisionOf(founderDecision);
   const financialSources = [
     ["Total asking price", f.askingPrice], ["Business component", f.businessAskingPrice],
     ["Gross Annual Revenue", f.annualRevenue], ["SDE", f.sde], ["EBITDA", f.ebitda],
@@ -62,6 +64,9 @@ export function buildReportLines(scan: DealScan, assumptions?: CashFlowAssumptio
     `Business: ${scan.overview.businessName.value ?? "Not Disclosed"}`,
     `Preliminary Decision - not acquisition approval: ${scan.decision.recommendation}`,
     scan.decision.explanation,
+    `Founder Decision: ${founderDecisionLabel(founder)}`,
+    `Founder rationale: ${founder.rationale.trim() || "Not provided"}`,
+    `Next diligence action: ${founder.nextDiligenceAction.trim() || "Not provided"}`,
     resultsDisclaimer,
     "",
     "2. Financial Snapshot and Transaction Composition",

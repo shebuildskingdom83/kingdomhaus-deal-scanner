@@ -14,12 +14,14 @@ import Sparkles from "lucide-react/dist/esm/icons/sparkles";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import { downloadScanPdf } from "./pdf";
 import { createCashFlowAssumptions } from "./acquisitionCashFlow";
+import { createFounderDecision, founderDecisionChoices, founderDecisionDisplayLabel, founderDecisionOf, type FounderDecision } from "./founderDecision";
 import { useAcquisitionRecovery } from "./useAcquisitionRecovery";
 import type { RecoveryControls } from "./useAcquisitionRecovery";
 import { AcquisitionRecovery } from "./AcquisitionRecovery";
 import { businessComponentAmount, claritySellerDependence, diligenceReadout, publicReportText, resultsDisclaimer } from "./reporting";
 import { buildCurrentAcquisitionCsv, downloadCsv } from "./csv";
-import type { AcquisitionForm } from "./acquisitionRecord";
+import type { AcquisitionForm, KhdaAnalysis } from "./acquisitionRecord";
+import { validKhdaAnalysis } from "./recordValidation";
 import type { CashFlowAssumptions } from "./acquisitionCashFlow";
 import { PostAcquisitionCashFlow } from "./PostAcquisitionCashFlow";
 import { retrieveListing } from "./urlRetrieval";
@@ -29,7 +31,6 @@ import { preserveStreetAddressEvidence, resolvedStreetAddress } from "./listingA
 import { preserveListingMedia } from "./listingMedia";
 import { formatMoney, formatRatio, isOptionalRealEstate, safeRatio } from "./financial";
 import { PuterResponseFormatError, runPuterDealClarityPoc } from "./puterPoc";
-import type { PuterDealClaritySummary } from "./puterPoc";
 import type { AssetDetail, DealScan, MoneyField, RealEstateDetail, RiskCheck, ScanResponse, TextFact } from "./types";
 
 export type FormState = AcquisitionForm;
@@ -72,7 +73,7 @@ export function App() {
 export function ScannerWorkspace({ recovery, headerActions, onReturnToWorkspace }: { recovery: RecoveryControls; headerActions?: ReactNode; onReturnToWorkspace?: () => void }) {
   const begin = useWorkspaceOperation(recovery.session, recovery.generation);
   const request = recovery.session ? workspaceApi(recovery.session) : authenticatedApi;
-  const { form, scan, cashFlow } = recovery.work;
+  const { form, scan, cashFlow, founderDecision, khdaAnalysis } = recovery.work;
   const setForm = (value: FormState | ((current: FormState) => FormState)) => recovery.setWork(current => ({
     ...current, form: typeof value === "function" ? value(current.form) : value
   }));
@@ -213,12 +214,16 @@ export function ScannerWorkspace({ recovery, headerActions, onReturnToWorkspace 
           setMessage(null);
           setErrors([]);
         }}
-        onDownload={(assumptions) => { recovery.session?.assert(); downloadScanPdf(scan, assumptions); }}
+        onDownload={(assumptions, decision) => { recovery.session?.assert(); downloadScanPdf(scan, assumptions, decision); }}
         onFieldChange={updateForm}
         onRefresh={submitScan}
         onScanFromUrl={scanFromUrl}
         cashFlowAssumptions={cashFlow}
         onCashFlowChange={value => recovery.setWork(current => ({ ...current, cashFlow: value }))}
+        founderDecision={founderDecision}
+        onFounderDecisionChange={value => { recovery.session?.assert(); recovery.setWork(current => ({ ...current, founderDecision: value })); }}
+        khdaAnalysis={khdaAnalysis}
+        onKhdaAnalysisChange={value => { recovery.session?.assert(); recovery.setWork(current => ({ ...current, khdaAnalysis: value })); }}
         recoveryControls={<AcquisitionRecovery recovery={recovery} busy={isLoading || isFetchingUrl} />}
         headerActions={workspaceActions}
         session={recovery.session}
@@ -321,12 +326,16 @@ export function ResultsScreen(props: {
   isLoading: boolean;
   isFetchingUrl: boolean;
   onBack: () => void;
-  onDownload: (assumptions?: CashFlowAssumptions) => void;
+  onDownload: (assumptions?: CashFlowAssumptions, founderDecision?: FounderDecision) => void;
   onFieldChange: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
   onRefresh: () => void;
   onScanFromUrl: () => void;
   cashFlowAssumptions?: CashFlowAssumptions;
   onCashFlowChange?: (value: CashFlowAssumptions) => void;
+  founderDecision?: FounderDecision;
+  onFounderDecisionChange?: (value: FounderDecision) => void;
+  khdaAnalysis?: KhdaAnalysis;
+  onKhdaAnalysisChange?: (value: KhdaAnalysis) => void;
   recoveryControls?: ReactNode;
   headerActions?: ReactNode;
   session?: WorkspaceSession;
@@ -337,6 +346,13 @@ export function ResultsScreen(props: {
   const [localAssumptions, setLocalAssumptions] = useState(createCashFlowAssumptions);
   const cashFlowAssumptions = props.cashFlowAssumptions ?? localAssumptions;
   const setCashFlowAssumptions = props.onCashFlowChange ?? setLocalAssumptions;
+  const [localFounderDecision, setLocalFounderDecision] = useState(createFounderDecision);
+  const founderDecision = founderDecisionOf(props.founderDecision ?? localFounderDecision);
+  const setFounderDecision = props.onFounderDecisionChange ?? setLocalFounderDecision;
+  const [localKhdaAnalysis, setLocalKhdaAnalysis] = useState<KhdaAnalysis>();
+  const khdaAnalysis = props.onKhdaAnalysisChange ? props.khdaAnalysis : localKhdaAnalysis;
+  const setKhdaAnalysis = props.onKhdaAnalysisChange ?? setLocalKhdaAnalysis;
+  const khdaStale = Boolean(khdaAnalysis && khdaAnalysis.sourceScanId !== scan.id);
   const optionalRealEstate = isOptionalRealEstate(scan.financials.realEstate);
   const optionalRealEstateAmount = optionalRealEstate ? scan.financials.realEstate.value.amount : null;
   const requiredAdditionalCosts = scan.financials.knownAdditionalAcquisitionCosts.amount;
@@ -362,11 +378,9 @@ export function ResultsScreen(props: {
       : { label: "Business-only asking / advertised cash flow", value: formatRatio(businessCashFlowMultiple) };
   const [puterPoc, setPuterPoc] = useState<{
     isLoading: boolean;
-    summary: PuterDealClaritySummary | null;
     error: string | null;
   }>({
     isLoading: false,
-    summary: null,
     error: null
   });
   const [puterConfirmationOpen, setPuterConfirmationOpen] = useState(false);
@@ -381,7 +395,7 @@ export function ResultsScreen(props: {
     setExportError(null);
     try {
       props.session?.assert();
-      downloadCsv(buildCurrentAcquisitionCsv(scan, cashFlowAssumptions), "kingdomhaus-current-acquisition.csv");
+      downloadCsv(buildCurrentAcquisitionCsv(scan, cashFlowAssumptions, founderDecision), "kingdomhaus-current-acquisition.csv");
       setExportNotice("CSV exported.");
     } catch {
       setExportNotice(null);
@@ -398,16 +412,17 @@ export function ResultsScreen(props: {
       operation = beginAnalysis();
       const result = await runPuterDealClarityPoc(scan, operation.assert);
       operation.assert();
+      const completed: KhdaAnalysis = { summary: result.summary, completedAt: new Date().toISOString(), model: result.model, sourceScanId: scan.id };
+      if (!validKhdaAnalysis(completed)) throw new PuterResponseFormatError("The completed analysis exceeded the supported summary format.", "");
+      setKhdaAnalysis(completed);
       setPuterPoc({
         isLoading: false,
-        summary: result.summary,
         error: null
       });
     } catch (error) {
       if (error instanceof WorkspaceChangedError || operation?.signal.aborted || (props.session && !props.session.active)) return;
       setPuterPoc({
         isLoading: false,
-        summary: null,
         error:
           error instanceof PuterResponseFormatError
             ? "The analysis response was incomplete. No deal facts were changed."
@@ -441,6 +456,32 @@ export function ResultsScreen(props: {
         </div>
       </section>
 
+      <section className="founder-decision-panel" aria-labelledby="acquisition-decision-heading">
+        <div className="founder-decision-intro">
+          <h2 id="acquisition-decision-heading">Acquisition Decision</h2>
+          <span className="founder-decision-status" data-decision={founderDecision.decision ?? "Undecided"}
+            role="img" aria-label={`Acquisition decision: ${founderDecisionDisplayLabel(founderDecision)}`}
+            title={founderDecisionDisplayLabel(founderDecision)} />
+        </div>
+        <div className="founder-decision-fields">
+          <label>
+            <span className="sr-only">Decision</span>
+            <select value={founderDecision.decision ?? ""} onChange={event => setFounderDecision({ ...founderDecision, decision: (event.target.value || null) as FounderDecision["decision"] })}>
+              <option value="">Undecided</option>
+              {founderDecisionChoices.map(choice => <option key={choice} value={choice}>{founderDecisionDisplayLabel({ ...founderDecision, decision: choice })}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>Reason for Decision <small>(optional)</small></span>
+            <textarea rows={2} maxLength={4000} placeholder="Optional" value={founderDecision.rationale} onChange={event => setFounderDecision({ ...founderDecision, rationale: event.target.value })} />
+          </label>
+          <label>
+            <span>Next Step <small>(optional)</small></span>
+            <textarea rows={2} maxLength={4000} placeholder="Optional" value={founderDecision.nextDiligenceAction} onChange={event => setFounderDecision({ ...founderDecision, nextDiligenceAction: event.target.value })} />
+          </label>
+        </div>
+      </section>
+
       <CorrectionAccordion
         scan={scan}
         form={props.form}
@@ -462,7 +503,7 @@ export function ResultsScreen(props: {
 
       <div className="report-toolbar">
         <section className="action-row" aria-label="Result actions">
-          <button type="button" onClick={() => props.onDownload(cashFlowAssumptions)}>
+          <button type="button" onClick={() => props.onDownload(cashFlowAssumptions, founderDecision)}>
             <Download aria-hidden="true" />
             Download PDF
           </button>
@@ -604,18 +645,19 @@ export function ResultsScreen(props: {
               </div>
             </div>
           ) : null}
-          {puterPoc.summary ? (
+          {khdaAnalysis ? (
             <div className="puter-summary">
               <div className="analysis-source">
-                <span>Optional AI assessment - not verified evidence</span>
+                <span>{khdaStale ? "Earlier KHDA analysis — source scan changed; not current" : "KHDA analysis — preliminary, unverified AI findings"}</span>
               </div>
+              <p>Completed {new Date(khdaAnalysis.completedAt).toLocaleDateString()} using {khdaAnalysis.model}. These findings are separate from the rule-based recommendation and Acquisition Decision.</p>
               <div className="summary-grid">
-                <SummaryQuestion label="Strategic fit" value={puterPoc.summary.strategicFit} />
-                <SummaryQuestion label="Attractive characteristics" value={puterPoc.summary.attractiveCharacteristics} />
-                <SummaryQuestion label="Seller dependence" value={puterPoc.summary.sellerDependence} />
-                <SummaryQuestion label="Equipment continuity" value={puterPoc.summary.equipmentContinuity} />
-                <SummaryQuestion label="Financial questions" value={puterPoc.summary.financialQuestions} />
-                <SummaryQuestion label="Major risks" value={puterPoc.summary.majorRisks} />
+                <SummaryQuestion label="Strategic fit" value={khdaAnalysis.summary.strategicFit} />
+                <SummaryQuestion label="Attractive characteristics" value={khdaAnalysis.summary.attractiveCharacteristics} />
+                <SummaryQuestion label="Seller dependence" value={khdaAnalysis.summary.sellerDependence} />
+                <SummaryQuestion label="Equipment continuity" value={khdaAnalysis.summary.equipmentContinuity} />
+                <SummaryQuestion label="Financial questions" value={khdaAnalysis.summary.financialQuestions} />
+                <SummaryQuestion label="Major risks" value={khdaAnalysis.summary.majorRisks} />
               </div>
             </div>
           ) : null}
