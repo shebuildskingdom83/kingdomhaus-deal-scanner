@@ -1,0 +1,120 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { onIdTokenChanged, signOut } from "firebase/auth";
+import type { User } from "firebase/auth";
+import type { ReactNode } from "react";
+import LogOut from "lucide-react/dist/esm/icons/log-out";
+import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
+import AlertCircle from "lucide-react/dist/esm/icons/alert-circle";
+import { cloudClient, cloudConfigurationError, cloudEmulator, cloudSignIn, founderUid } from "./firebaseClient";
+import { AppHeader, initialForm } from "./App";
+import { AcquisitionWorkspace } from "./AcquisitionWorkspace";
+import { useCloudAcquisitionRecovery } from "./useCloudAcquisitionRecovery";
+import { isFounderAccount } from "./cloudPersistence";
+import { signInErrorMessage } from "./signInErrorMessage";
+import { returnToHomepage } from "./websiteNavigation";
+import { WorkspaceSession, workspaceAdmitted } from "./workspaceSession";
+
+export default function CloudApp() {
+  const configurationError = cloudConfigurationError();
+  return configurationError ? <main className="app-shell intake-shell"><AppHeader activeView="Scan" /><section className="cloud-access"><p role="status">{configurationError}</p></section></main> : <CloudAccess />;
+}
+function CloudAccess() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [signInError, setSignInError] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
+  const [session, setSession] = useState(0);
+  const [workspace, setWorkspace] = useState<WorkspaceSession | null>(null);
+  const currentWorkspace = useRef<WorkspaceSession | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  useEffect(() => {
+    const auth = cloudClient().auth;
+    let version = 0, disposed = false;
+    const clear = () => { currentWorkspace.current?.close(); currentWorkspace.current = null; setWorkspace(null); };
+    const unsubscribe = onIdTokenChanged(auth, current => {
+      const turn = ++version;
+      const same = currentWorkspace.current?.active && currentWorkspace.current.uid === current?.uid;
+      if (!same) { clear(); setLoading(true); }
+      setUser(current); setSignInError(""); setError("");
+      const accept = (admitted: boolean) => {
+        if (disposed || turn !== version || auth.currentUser !== current) return;
+        if (current && admitted) {
+          if (!same) {
+            const next = new WorkspaceSession(current.uid, isFounderAccount(current.uid, founderUid), () => auth.currentUser === current);
+            currentWorkspace.current = next; setWorkspace(next);
+          }
+        } else clear();
+        setLoading(false);
+      };
+      if (!current || isFounderAccount(current.uid, founderUid)) accept(Boolean(current));
+      else void workspaceAdmitted(current, founderUid).then(accept).catch(() => {
+        if (!disposed && turn === version) { clear(); setLoading(false); setSignInError("Unable to verify workspace access. Please sign in again."); }
+      });
+    }, failure => {
+      ++version; clear(); setUser(null);
+      setSignInError(signInErrorMessage(failure) || "Unable to sign in. Please try again."); setLoading(false);
+    });
+    return () => { disposed = true; ++version; unsubscribe(); currentWorkspace.current?.close(); currentWorkspace.current = null; };
+  }, []);
+  const authorized = Boolean(workspace?.active);
+  const accountAction = user ? <>
+    <button type="button" className="ghost-button cloud-header-action" onClick={async () => {
+      if (!window.confirm("Sign out and clear this session's acquisition view? Unsaved edits held in memory will be lost. Wait for Saved or export first.")) return;
+      currentWorkspace.current?.close(); currentWorkspace.current = null; setWorkspace(null); setSigningOut(true); setError("");
+      const auth = cloudClient().auth;
+      try {
+        await signOut(auth);
+        // A completed old sign-out must not clear a different account selected while it was pending.
+        if (auth.currentUser && auth.currentUser !== user) { setSigningOut(false); return; }
+        setUser(null); setSigningOut(false); returnToHomepage();
+      } catch {
+        if (auth.currentUser && auth.currentUser !== user) setSigningOut(false);
+        else setError("Sign-out failed. Please try again.");
+      }
+    }}><LogOut aria-hidden="true" />Sign out</button>
+    {error ? <span className="cloud-header-error" role="alert">{error}</span> : null}
+  </> : null;
+  const reload = () => {
+    if (window.confirm("Reload the latest cloud workspace and discard in-memory edits? Export any unsaved work first.")) setSession(value => value + 1);
+  };
+  if (signingOut) return <main className="app-shell intake-shell"><AppHeader activeView="Scan" actions={accountAction} /><section className="cloud-access"><p role="status">Your workspace is closed. Completing sign-out...</p></section></main>;
+  if (loading) return <main className="app-shell intake-shell"><AppHeader activeView="Scan" /><section className="cloud-access" aria-label="Cloud account" aria-busy="true"><p role="status">Checking sign-in...</p></section></main>;
+  if (authorized && user && workspace) return <CloudWorkspace key={session + ":" + user.uid + ":" + workspace.epoch} workspace={workspace} accountAction={accountAction} onReload={reload} />;
+  return <main className="app-shell intake-shell">
+    <AppHeader activeView="Scan" actions={accountAction} />
+    <section className={user ? "cloud-access" : "cloud-access cloud-auth-card"} aria-label="Cloud account">
+      {!user ? <>
+        <h2>Sign in to Deal Scanner</h2>
+        <p className="cloud-auth-description">Access your saved acquisitions.</p>
+      </> : null}
+      <div className={user ? "recovery-actions" : "cloud-auth-actions"}>
+        {cloudEmulator ? <strong>Synthetic cloud preview</strong> : null}
+        {loading ? <span role="status">Checking sign-in...</span> : !user ? <button type="button" className="primary-action" disabled={signingIn} aria-busy={signingIn} aria-describedby={signInError ? "cloud-auth-error" : undefined}
+          onClick={async () => { setSignInError(""); setSigningIn(true); try { await cloudSignIn(); } catch (failure) {
+            setSignInError(signInErrorMessage(failure));
+          } finally { setSigningIn(false); } }}>Sign in with Google</button> : null}
+      </div>
+      {!founderUid ? <p role="status">Acquisition access remains locked until founder authorization is configured.</p> : null}
+      {!loading && user && !authorized ? <p className="cloud-auth-error" role="alert"><AlertCircle aria-hidden="true" /><span>This account doesn't have access to Deal Scanner.</span></p> : null}
+      {!user ? <div className="cloud-auth-feedback">
+        {signInError ? <p id="cloud-auth-error" className="cloud-auth-error" role="alert"><AlertCircle aria-hidden="true" /><span>{signInError}</span></p> : null}
+      </div> : null}
+    </section>
+  </main>;
+}
+function CloudWorkspace({ accountAction, onReload, workspace }: { accountAction: ReactNode; onReload: () => void; workspace: WorkspaceSession }) {
+  const repository = useMemo(() => cloudClient().repository(workspace), [workspace]);
+  const recovery = useCloudAcquisitionRecovery(repository, initialForm, workspace);
+  const actions = <>
+    {recovery.cloud?.status === "Error" ? <button type="button" className="cloud-header-action" onClick={onReload}><RefreshCw aria-hidden="true" />Reload cloud workspace</button> : null}
+    {accountAction}
+  </>;
+  if (!recovery.cloud?.ready) return <main className="app-shell intake-shell"><AppHeader activeView="Scan" actions={actions} /><section className="cloud-access portfolio-loading" aria-label="Cloud recovery" aria-busy={recovery.cloud?.status === "Saving"}>
+    <p className="eyebrow">Acquisition Portfolio</p>
+    <h2>{recovery.storageError ? "Your portfolio could not be loaded" : "Opening your portfolio"}</h2>
+    <p role="status">{recovery.cloud?.status}: {recovery.storageError || "Loading cloud acquisitions and workspace..."}</p>
+    <button type="button" onClick={recovery.cloud?.retry}>Retry cloud recovery</button>
+  </section></main>;
+  return <AcquisitionWorkspace recovery={recovery} headerActions={actions} />;
+}

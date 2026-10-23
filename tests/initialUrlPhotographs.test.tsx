@@ -13,7 +13,7 @@ import { preserveListingMedia } from "../src/listingMedia";
 import { ListingPhotographs } from "../src/ListingPhotographs";
 
 const json = (data: unknown) => new Response(JSON.stringify(data), { headers: { "Content-Type": "application/json" } });
-const config = { token: "fixture-only-not-a-real-token", maxChargeUsd: "0.25", timeoutSecs: "180" };
+const config = { token: "fixture-only-not-a-real-token", maxChargeUsd: "0.25", timeoutSecs: "180", maxRuns: "100" };
 
 describe("required initial URL-scan listing photographs (fixture transport only)", () => {
   it.each([painting[0], concrete[0]])("renders initial URL-scan photographs before any record is saved", async row => {
@@ -24,10 +24,13 @@ describe("required initial URL-scan listing photographs (fixture transport only)
         .mockResolvedValueOnce(json({ data: { status: "SUCCEEDED", defaultDatasetId: "fixtureDataset" } }))
         .mockResolvedValueOnce(json([row]));
       const service = new ApifyListingService(config, provider);
+    const startOwned = (value: unknown) => service.start(value, "synthetic-founder");
+    const statusOwned = (id: string) => service.status(id, "synthetic-founder");
+    const reconcileOwned = (id: string, request: import("../src/types").ScanRequest) => service.reconcile(id, request, "synthetic-founder");
       const transport = vi.fn<typeof fetch>(async (address, init) => {
         if (address === "/api/retrieval-config") return json(service.settings());
-        if (address === "/api/fetch-listing") return json(await service.start(JSON.parse(String(init?.body))));
-        if (String(address).startsWith("/api/listing-retrieval/")) return json(await service.status(String(address).split("/").pop()!));
+        if (address === "/api/fetch-listing") return json(await startOwned(JSON.parse(String(init?.body))));
+        if (String(address).startsWith("/api/listing-retrieval/")) return json(await statusOwned(String(address).split("/").pop()!));
         throw new Error("Unexpected fixture endpoint");
       });
       const confirm = vi.fn(() => true);
@@ -35,7 +38,7 @@ describe("required initial URL-scan listing photographs (fixture transport only)
       expect(confirm).toHaveBeenCalledTimes(1);
       expect(ready?.retrievalId).toBeTruthy();
       // The same reconciliation/report construction used by POST /api/scan.
-      const hybrid = service.reconcile(ready!.retrievalId!, { listingUrl: ready!.finalUrl, listingText: ready!.listingText });
+      const hybrid = reconcileOwned(ready!.retrievalId!, { listingUrl: ready!.finalUrl, listingText: ready!.listingText });
       const scan = attachRetrieval(buildLocalPreviewScan(hybrid.request), hybrid.retrieval);
       const save = vi.fn();
       const repo = new AcquisitionRepository(() => ({ getItem: () => null, setItem: save }));

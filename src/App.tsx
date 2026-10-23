@@ -1,3 +1,6 @@
+import { authenticatedApi, workspaceApi } from "./authenticatedApi";
+import { useWorkspaceOperation } from "./useWorkspaceOperation";
+import { WorkspaceChangedError, type WorkspaceSession } from "./workspaceSession";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import AlertCircle from "lucide-react/dist/esm/icons/alert-circle";
@@ -12,6 +15,7 @@ import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import { downloadScanPdf } from "./pdf";
 import { createCashFlowAssumptions } from "./acquisitionCashFlow";
 import { useAcquisitionRecovery } from "./useAcquisitionRecovery";
+import type { RecoveryControls } from "./useAcquisitionRecovery";
 import { AcquisitionRecovery } from "./AcquisitionRecovery";
 import { businessComponentAmount, claritySellerDependence, diligenceReadout, publicReportText, resultsDisclaimer } from "./reporting";
 import { buildCurrentAcquisitionCsv, downloadCsv } from "./csv";
@@ -30,7 +34,7 @@ import type { AssetDetail, DealScan, MoneyField, RealEstateDetail, RiskCheck, Sc
 
 export type FormState = AcquisitionForm;
 
-const initialForm: FormState = {
+export const initialForm: FormState = {
   businessName: "",
   listingUrl: "",
   listingText: "",
@@ -62,6 +66,12 @@ const correctionFields = [
 
 export function App() {
   const recovery = useAcquisitionRecovery(initialForm);
+  return <ScannerWorkspace recovery={recovery} />;
+}
+
+export function ScannerWorkspace({ recovery, headerActions, onReturnToWorkspace }: { recovery: RecoveryControls; headerActions?: ReactNode; onReturnToWorkspace?: () => void }) {
+  const begin = useWorkspaceOperation(recovery.session, recovery.generation);
+  const request = recovery.session ? workspaceApi(recovery.session) : authenticatedApi;
   const { form, scan, cashFlow } = recovery.work;
   const setForm = (value: FormState | ((current: FormState) => FormState)) => recovery.setWork(current => ({
     ...current, form: typeof value === "function" ? value(current.form) : value
@@ -71,6 +81,13 @@ export function App() {
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const workspaceActions = <>
+    {onReturnToWorkspace ? <button type="button" className="ghost-button cloud-header-action"
+      disabled={isLoading || isFetchingUrl || recovery.cloud?.busy} onClick={onReturnToWorkspace}>
+      <ArrowLeft aria-hidden="true" />Return to Workspace
+    </button> : null}
+    {headerActions}
+  </>;
   const retrievalId = useRef<string | undefined>(undefined);
   const retrievalBusy = useRef(false);
   const formRevision = useRef(0);
@@ -81,6 +98,8 @@ export function App() {
   }, [message, isLoading, isFetchingUrl]);
   useEffect(() => {
     retrievalId.current = undefined;
+    retrievalBusy.current = false;
+    setIsLoading(false); setIsFetchingUrl(false);
     formRevision.current += 1;
   }, [recovery.generation]);
 
@@ -95,8 +114,11 @@ export function App() {
     }
 
     setIsLoading(true);
+    let operation: ReturnType<typeof begin> | undefined;
     try {
-      const response = await fetch("/api/scan", {
+      operation = begin();
+      const response = await request("/api/scan", {
+        signal: operation.signal,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -108,16 +130,20 @@ export function App() {
         })
       });
       const payload = (await response.json()) as ScanResponse;
+      operation.assert();
       if (!payload.ok) {
         setErrors(payload.details?.length ? payload.details : [payload.error]);
         return;
       }
       setScan(preserveStreetAddressEvidence(preserveListingMedia(payload.scan, scan), scan));
       setMessage("Scan complete.");
-    } catch {
-      setErrors(["Scan failed. Check that the local API server is running and try again."]);
+    } catch (error) {
+      if (error instanceof WorkspaceChangedError || operation?.signal.aborted || (recovery.session && !recovery.session.active)) return;
+      setErrors([recovery.session && !recovery.session.founder
+        ? "Scanning is unavailable if it requires a paid provider. Paid provider access is reserved for the founder. Your work is unchanged."
+        : "Scan failed or API access is unavailable. Your work is unchanged. Check sign-in and the local API setup before trying again."]);
     } finally {
-      setIsLoading(false);
+      if (!operation?.signal.aborted && (!recovery.session || recovery.session.active)) setIsLoading(false);
     }
   }
 
@@ -134,8 +160,12 @@ export function App() {
     retrievalBusy.current = true;
     setIsFetchingUrl(true);
     const revision = formRevision.current;
+    let operation: ReturnType<typeof begin> | undefined;
     try {
-      const payload = await retrieveListing(form.listingUrl, { confirm: (notice) => window.confirm(notice), progress: setMessage });
+      operation = begin();
+      const payload = await retrieveListing(form.listingUrl, { fetcher: request, signal: operation.signal, assertCurrent: operation.assert,
+        confirm: notice => { operation!.assert(); return window.confirm(notice); }, progress: value => { operation!.assert(); setMessage(value); } });
+      operation.assert();
       if (!payload) return;
       if (revision !== formRevision.current) {
         setMessage("Listing retrieved. Your edited text was kept.");
@@ -151,13 +181,14 @@ export function App() {
       setForm(nextForm);
       setMessage(payload.message);
       await submitScan(nextForm);
+      operation.assert();
       setMessage(payload.message);
     } catch (error) {
+      if (error instanceof WorkspaceChangedError || operation?.signal.aborted || (recovery.session && !recovery.session.active)) return;
       setMessage(null);
       setErrors([error instanceof Error ? error.message : "URL scan failed. Paste the listing text and scan again."]);
     } finally {
-      retrievalBusy.current = false;
-      setIsFetchingUrl(false);
+      if (!operation?.signal.aborted && (!recovery.session || recovery.session.active)) { retrievalBusy.current = false; setIsFetchingUrl(false); }
     }
   }
 
@@ -182,20 +213,22 @@ export function App() {
           setMessage(null);
           setErrors([]);
         }}
-        onDownload={(assumptions) => downloadScanPdf(scan, assumptions)}
+        onDownload={(assumptions) => { recovery.session?.assert(); downloadScanPdf(scan, assumptions); }}
         onFieldChange={updateForm}
         onRefresh={submitScan}
         onScanFromUrl={scanFromUrl}
         cashFlowAssumptions={cashFlow}
         onCashFlowChange={value => recovery.setWork(current => ({ ...current, cashFlow: value }))}
         recoveryControls={<AcquisitionRecovery recovery={recovery} busy={isLoading || isFetchingUrl} />}
+        headerActions={workspaceActions}
+        session={recovery.session}
       />
     );
   }
 
   return (
     <main className="app-shell intake-shell">
-      <AppHeader activeView="Scan" />
+      <AppHeader activeView="Scan" actions={workspaceActions} />
 
       <section className="intake-layout" id="listing-intake">
         <div className="intro-panel">
@@ -295,8 +328,12 @@ export function ResultsScreen(props: {
   cashFlowAssumptions?: CashFlowAssumptions;
   onCashFlowChange?: (value: CashFlowAssumptions) => void;
   recoveryControls?: ReactNode;
+  headerActions?: ReactNode;
+  session?: WorkspaceSession;
 }) {
   const { scan } = props;
+  const beginAnalysis = useWorkspaceOperation(props.session, scan.id);
+  const puterAllowed = !props.session || props.session.founder;
   const [localAssumptions, setLocalAssumptions] = useState(createCashFlowAssumptions);
   const cashFlowAssumptions = props.cashFlowAssumptions ?? localAssumptions;
   const setCashFlowAssumptions = props.onCashFlowChange ?? setLocalAssumptions;
@@ -343,6 +380,7 @@ export function ResultsScreen(props: {
   function exportCurrentCsv() {
     setExportError(null);
     try {
+      props.session?.assert();
       downloadCsv(buildCurrentAcquisitionCsv(scan, cashFlowAssumptions), "kingdomhaus-current-acquisition.csv");
       setExportNotice("CSV exported.");
     } catch {
@@ -352,16 +390,21 @@ export function ResultsScreen(props: {
   }
 
   async function runPuterPoc() {
+    if (!puterAllowed) return;
     setPuterConfirmationOpen(false);
     setPuterPoc((current) => ({ ...current, isLoading: true, error: null }));
+    let operation: ReturnType<typeof beginAnalysis> | undefined;
     try {
-      const result = await runPuterDealClarityPoc(scan);
+      operation = beginAnalysis();
+      const result = await runPuterDealClarityPoc(scan, operation.assert);
+      operation.assert();
       setPuterPoc({
         isLoading: false,
         summary: result.summary,
         error: null
       });
     } catch (error) {
+      if (error instanceof WorkspaceChangedError || operation?.signal.aborted || (props.session && !props.session.active)) return;
       setPuterPoc({
         isLoading: false,
         summary: null,
@@ -375,7 +418,7 @@ export function ResultsScreen(props: {
 
   return (
     <main className="app-shell results-shell">
-      <AppHeader activeView="Report" />
+      <AppHeader activeView="Report" actions={props.headerActions} />
 
       <section className="results-header executive-header" id="report-top">
         <div className="executive-copy">
@@ -536,12 +579,13 @@ export function ResultsScreen(props: {
             <p className="khda-subtitle">A deeper look at the opportunity.</p>
             <p>The Deal Analyzer helps connect disclosed financial information, ownership responsibilities, operating dependencies, and diligence questions behind a listing. It provides an additional analytical perspective beyond the initial rule-based screen.</p>
           </div>
-          <button className="primary-action intelligence-action" type="button" onClick={() => setPuterConfirmationOpen(true)} disabled={puterPoc.isLoading} aria-busy={puterPoc.isLoading}>
+          <button className="primary-action intelligence-action" type="button" onClick={() => { props.session?.assert(); if (puterAllowed) setPuterConfirmationOpen(true); }} disabled={!puterAllowed || puterPoc.isLoading} aria-busy={puterPoc.isLoading}>
             {puterPoc.isLoading ? <RefreshCw aria-hidden="true" className="spin" /> : <Sparkles aria-hidden="true" />}
             {puterPoc.isLoading ? "Analyzing deal" : "KingdomHaus Intelligence™ — Analyze Deal"}
           </button>
         </section>
-        {puterConfirmationOpen ? (
+        {!puterAllowed ? <p role="status">AI deal analysis is available to the founder only during the pilot.</p> : null}
+        {puterConfirmationOpen && puterAllowed ? (
           <div className="ai-confirmation" aria-live="polite">
             <p>This optional analysis uses an external AI service. Sign-in may be required. Usage may consume your allowance or incur charges on that account. Continue only if you accept those charges.</p>
             <div className="confirmation-actions">
@@ -742,15 +786,16 @@ function matchingText(text: string, pattern: RegExp) {
     .find((item) => pattern.test(item)) ?? null;
 }
 
-function AppHeader(_: { activeView: "Scan" | "Report" }) {
+export function AppHeader({ actions }: { activeView: "Scan" | "Report"; actions?: ReactNode }) {
   return (
     <header className="app-header" aria-label="Application header">
       <div className="brand-lockup">
         <img className="brand-logo" src="/kingdomhaus-logo.webp" alt="KingdomHaus logo" width="112" height="84" />
-        <div>
-          <p className="eyebrow">KingdomHaus Intelligence</p>
-          <h1>Deal Scanner</h1>
-        </div>
+        <h1>Deal Scanner</h1>
+      </div>
+      <div className="app-header-actions">
+        <a className="kingdomhaus-home" href="/">KingdomHaus Home</a>
+        {actions}
       </div>
     </header>
   );

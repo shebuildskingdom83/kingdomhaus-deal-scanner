@@ -48,8 +48,10 @@ declare global {
 const PUTER_SCRIPT_ID = "puter-js-sdk";
 const PUTER_SCRIPT_SRC = "https://js.puter.com/v2/";
 
-export async function runPuterDealClarityPoc(scan: DealScan): Promise<PuterPocResult> {
+export async function runPuterDealClarityPoc(scan: DealScan, assertCurrent: () => void = () => {}): Promise<PuterPocResult> {
+  assertCurrent();
   await loadPuterScript();
+  assertCurrent();
 
   const puter = window.puter;
   if (!puter?.ai?.chat) {
@@ -57,11 +59,13 @@ export async function runPuterDealClarityPoc(scan: DealScan): Promise<PuterPocRe
   }
 
   const isSignedIn = await puter.auth?.isSignedIn?.();
+  assertCurrent();
   if (!isSignedIn) {
     if (!puter.auth?.signIn) {
       throw new Error("Puter sign-in is required, but the sign-in API is not available.");
     }
     await puter.auth.signIn();
+    assertCurrent();
   }
 
   const response = await puter.ai.chat(buildPuterPrompt(scan), {
@@ -98,6 +102,7 @@ export async function runPuterDealClarityPoc(scan: DealScan): Promise<PuterPocRe
     }
   });
 
+  assertCurrent();
   const extracted = extractPuterTextDetails(response);
   if (!extracted.text.trim()) {
     throw new PuterResponseFormatError(

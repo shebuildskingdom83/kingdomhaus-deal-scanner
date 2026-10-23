@@ -1,0 +1,47 @@
+// PROPOSED ONLY: migration revision metadata. Not selected by firebase.json.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function founder() { return request.auth != null && request.auth.uid == 'FOUNDER_UID_NOT_CONFIGURED'; }
+    function owns(uid) { return founder() && request.auth.uid == uid; }
+    function valid(id, uid) {
+      let data = request.resource.data;
+      let offset = data.get('migrationRevisionOffset', 0);
+      return data.keys().hasAll(['schemaVersion', 'ownerUid', 'id', 'revision', 'payload', 'updatedAt'])
+        && data.keys().hasOnly(['schemaVersion', 'ownerUid', 'id', 'revision', 'payload', 'updatedAt', 'migrationRevisionOffset'])
+        && data.schemaVersion == 1 && data.ownerUid == uid && data.id == id
+        && data.revision is int && data.revision >= 1
+        && offset is int && offset >= 0 && offset <= 999999999999
+        && data.payload is string && data.payload.size() <= 900000
+        && data.updatedAt == request.time;
+    }
+    function unchangedOffset() {
+      return request.resource.data.get('migrationRevisionOffset', 0) == resource.data.get('migrationRevisionOffset', 0)
+        && request.resource.data.keys().hasAny(['migrationRevisionOffset']) == resource.data.keys().hasAny(['migrationRevisionOffset']);
+    }
+    match /users/{uid}/acquisitions/{id} {
+      allow read: if owns(uid);
+      allow create: if owns(uid) && id.matches('[A-Za-z0-9_-]{1,100}') && valid(id, uid) && request.resource.data.revision == 1;
+      allow update: if owns(uid) && valid(id, uid) && unchangedOffset() && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if owns(uid);
+    }
+    match /users/{uid}/workspace/current {
+      allow read: if owns(uid);
+      allow create: if owns(uid) && valid('current', uid) && !request.resource.data.keys().hasAny(['migrationRevisionOffset']) && request.resource.data.revision == 1;
+      allow update: if owns(uid) && valid('current', uid) && !request.resource.data.keys().hasAny(['migrationRevisionOffset']) && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+    }
+    match /users/{uid}/sourceKeys/{key} {
+      allow read: if owns(uid);
+      allow create: if owns(uid) && key.matches('[a-f0-9]{64}')
+        && request.resource.data.keys().hasAll(['ownerUid', 'recordId'])
+        && request.resource.data.keys().hasOnly(['ownerUid', 'recordId'])
+        && request.resource.data.ownerUid == uid && request.resource.data.recordId is string
+        && request.resource.data.recordId.matches('[A-Za-z0-9_-]{1,100}')
+        && getAfter(/databases/$(database)/documents/users/$(uid)/acquisitions/$(request.resource.data.recordId)).data.ownerUid == uid;
+      allow update: if false;
+      allow delete: if owns(uid);
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

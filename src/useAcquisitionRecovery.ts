@@ -4,6 +4,13 @@ import { createCashFlowAssumptions } from "./acquisitionCashFlow";
 import { AcquisitionRepository, downloadBackup, makeRecord, matchingRecord, parseBackup, storageKey } from "./storage";
 import { retainedScan } from "./recordValidation";
 import { buildSavedAcquisitionsCsv, downloadCsv } from "./csv";
+import type { CloudStatus } from "./cloudPersistence";
+import type { WorkspaceSession } from "./workspaceSession";
+
+export type RecoveryControls = ReturnType<typeof useAcquisitionRecovery> & {
+  session?: WorkspaceSession;
+  cloud?: { status: CloudStatus; ready: boolean; busy: boolean; retry: () => void };
+};
 
 const messageOf = (error: unknown) => error instanceof Error ? error.message : "Saved work could not be updated.";
 const snapshot = (work: AcquisitionState) => JSON.stringify({ ...work, scan: work.scan ? retainedScan(work.scan) : null });

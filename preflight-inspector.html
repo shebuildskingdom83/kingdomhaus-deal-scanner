@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; img-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Acquisition Preflight Inspector</title>
+  <link rel="stylesheet" href="/src/preflightInspector.css">
+</head>
+<body>
+  <main>
+    <h1>Acquisition preflight</h1>
+    <p>Read-only inspection. Records remain in this browser; no acquisitions are opened, saved, downloaded, or transferred.</p>
+    <p>Run only after founder approval in the original Chrome workspace. Close this page to discard the report.</p>
+    <button id="inspect" type="button" disabled>Inspect saved acquisitions</button>
+    <p id="status" role="status">Inspection has not run.</p>
+    <p>Cloud conflicts are not checked. Compatible means structurally compatible without normalization, not independently verified or approved for migration. Blank assumptions remain blank.</p>
+    <pre id="report" aria-label="Read-only preflight report" tabindex="0" hidden></pre>
+  </main>
+  <script type="module" src="/src/preflightInspectorPage.ts"></script>
+</body>
+</html>

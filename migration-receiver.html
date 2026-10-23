@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>Migration Cloud Receiver</title><link rel="stylesheet" href="/src/preflightInspector.css"></head>
+<body><main><h1>Cloud migration receiver</h1>
+<p>Nothing is saved automatically. Sign-in and receiving a snapshot do not authorize cloud writes.</p>
+<button id="connect" disabled>Connect founder session</button>
+<button id="signin" hidden>Sign in with Google</button>
+<button id="review" disabled>Review cloud conflicts</button>
+<button id="execute" disabled>Confirm create-only migration</button>
+<button id="cancel" disabled>Cancel handoff</button>
+<p id="status" role="status">Not connected. No acquisition data has been read or transferred.</p>
+<pre id="summary" aria-label="Migration metadata and results" tabindex="0"></pre>
+<script type="module" src="/src/migrationReceiverPage.ts"></script></main></body></html>

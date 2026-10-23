@@ -1,15 +1,16 @@
+import { ApiError, UsageGuard, positiveInteger } from "./apiSecurity";
 import { randomUUID } from "node:crypto";
 import { APIFY_ACTOR_ID, approvedBizBuySellUrl, reconcileApifyListing } from "../src/hybridListing";
 import type { ListingRetrieval, ScanRequest, UrlFetchResponse } from "../src/types";
 
 type Ready = Extract<UrlFetchResponse, { listingText: string }>;
 type Job = {
-  id: string; requestId: string; url: string; runId?: string; response: UrlFetchResponse;
+  ownerUid: string; release?: () => void; id: string; requestId: string; url: string; runId?: string; response: UrlFetchResponse;
   retrieval?: ListingRetrieval; record?: Record<string, unknown>; pending?: Promise<UrlFetchResponse>; checkedAt: number;
   terminal?: boolean;
   usageUsd?: number | null;
 };
-type Config = { token?: string; maxChargeUsd?: string; timeoutSecs?: string };
+type Config = { token?: string; maxChargeUsd?: string; timeoutSecs?: string; maxRuns?: string };
 type Fetch = typeof fetch;
 const fallback = " You can paste the listing details below and scan manually.";
 const asObject = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -26,20 +27,23 @@ function accessReason(error: unknown): string {
 export class ApifyListingService {
   private jobs = new Map<string, Job>();
   private requests = new Map<string, Job>();
+  private readonly usage: UsageGuard;
   readonly maxChargeUsd: number;
   readonly timeoutSecs: number;
   readonly enabled: boolean;
   constructor(private config: Config, private fetcher: Fetch = fetch) {
-    this.maxChargeUsd = Number(config.maxChargeUsd ?? "0.25");
+    this.maxChargeUsd = Number(config.maxChargeUsd ?? "NaN");
     this.timeoutSecs = Number(config.timeoutSecs ?? "180");
-    this.enabled = Boolean(config.token?.trim()) && Number.isFinite(this.maxChargeUsd) && this.maxChargeUsd > 0 && this.maxChargeUsd <= 10 &&
+    this.usage = new UsageGuard(positiveInteger(config.maxRuns), 2, 10);
+    this.enabled = positiveInteger(config.maxRuns) !== null && Boolean(config.token?.trim()) && Number.isFinite(this.maxChargeUsd) && this.maxChargeUsd > 0 && this.maxChargeUsd <= 10 &&
       Number.isInteger(this.timeoutSecs) && this.timeoutSecs >= 30 && this.timeoutSecs <= 600;
   }
   settings() {
     return { enabled: this.enabled, maxChargeUsd: Number.isFinite(this.maxChargeUsd) ? this.maxChargeUsd : null,
       message: this.enabled ? "Apify charges apply to each explicitly confirmed run. Usage may be preliminary until billing settles." : "Apify retrieval is not configured. Paste the listing details to continue." };
   }
-  async start(value: unknown): Promise<UrlFetchResponse> {
+  async start(value: unknown, ownerUid: string): Promise<UrlFetchResponse> {
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(ownerUid)) throw new ApiError(403, "Invalid retrieval owner.");
     const input = asObject(value);
     let url: string;
     try { url = approvedBizBuySellUrl(typeof input.url === "string" ? input.url : ""); }
@@ -47,13 +51,14 @@ export class ApifyListingService {
     if (!this.enabled) return { ok: false, error: this.settings().message };
     if (input.paidScanConfirmed !== true) return { ok: false, error: "Confirm the Apify usage charge before starting a scan." };
     if (typeof input.requestId !== "string" || !/^[a-f0-9-]{36}$/i.test(input.requestId)) return { ok: false, error: "A valid scan request ID is required." };
-    const prior = this.requests.get(input.requestId);
+    const prior = this.requests.get(ownerUid + ":" + input.requestId);
     if (prior) return prior.url === url ? prior.pending ?? prior.response : { ok: false, error: "This request ID belongs to a different listing." };
-    const active = [...this.jobs.values()].find((job) => job.url === url && !job.terminal);
+    const active = [...this.jobs.values()].find((job) => job.ownerUid === ownerUid && job.url === url && !job.terminal);
     if (active) return active.pending ?? active.response;
     if (this.jobs.size >= 100) return { ok: false, error: "The local retrieval session is full. Restart the API after checking that no Apify runs are active." };
-    const job: Job = { id: randomUUID(), requestId: input.requestId, url, checkedAt: 0, response: { ok: false, error: "Retrieval has not started." } };
-    this.jobs.set(job.id, job); this.requests.set(job.requestId, job);
+    const release = this.usage.acquire();
+    const job: Job = { ownerUid, release, id: randomUUID(), requestId: input.requestId, url, checkedAt: 0, response: { ok: false, error: "Retrieval has not started." } };
+    this.jobs.set(job.id, job); this.requests.set(ownerUid + ":" + job.requestId, job);
     // Reserve the request before awaiting the chargeable POST. Never retry this POST.
     job.pending = this.launch(job);
     try { return await job.pending; } finally { job.pending = undefined; }
@@ -69,14 +74,14 @@ export class ApifyListingService {
       job.runId = run.id;
       job.response = { ok: true, status: "running", jobId: job.id, message: "Apify retrieval started. Waiting for the listing.", usageUsd: usd(run.usageTotalUsd), maxChargeUsd: this.maxChargeUsd };
     } catch (error) {
-      if (error instanceof ApifyHttpError && error.status >= 400 && error.status < 500) job.terminal = true;
+      if (error instanceof ApifyHttpError && error.status >= 400 && error.status < 500) { job.terminal = true; job.release?.(); }
       job.response = { ok: false, error: accessReason(error) + "Apify could not confirm that retrieval started. Check your Apify runs before starting another paid scan; this request will not be retried." + fallback };
     }
     return job.response;
   }
-  async status(id: string): Promise<UrlFetchResponse> {
+  async status(id: string, ownerUid: string): Promise<UrlFetchResponse> {
     const job = this.jobs.get(id);
-    if (!job) return { ok: false, error: "Retrieval session not found. Check Apify before starting another paid scan." + fallback };
+    if (!job || job.ownerUid !== ownerUid) throw new ApiError(404, "Retrieval session not found.");
     if (job.pending) return job.pending;
     if (!job.response.ok || !("status" in job.response)) return job.response;
     if (Date.now() - job.checkedAt < 1500) return job.response;
@@ -107,7 +112,7 @@ export class ApifyListingService {
           source: "BizBuySell via Apify", finalUrl: job.url, retrievalId: job.id, usageUsd, maxChargeUsd: this.maxChargeUsd,
           message: `Listing retrieved through Apify.${usageUsd === null ? " Usage cost is not yet available." : ` Reported run usage: $${usageUsd.toFixed(4)} (may be preliminary).`}` };
         job.response = ready;
-        job.terminal = true;
+        job.terminal = true; job.release?.();
       } else if (["FAILED", "TIMED-OUT", "ABORTED"].includes(String(run.status))) {
         job.terminal = true;
         job.response = { ok: false, error: `Apify retrieval ${String(run.status).toLowerCase()}.${usageUsd === null ? " Usage cost unavailable." : ` Reported usage: $${usageUsd.toFixed(4)}.`} No new run was started.` + fallback };
@@ -120,8 +125,9 @@ export class ApifyListingService {
     }
     return job.response;
   }
-  reconcile(id: string, request: ScanRequest) {
+  reconcile(id: string, request: ScanRequest, ownerUid: string) {
     const job = this.jobs.get(id);
+    if (!job || job.ownerUid !== ownerUid) throw new ApiError(404, "Retrieval session not found.");
     if (!job?.record || !job.retrieval || job.url !== approvedBizBuySellUrl(request.listingUrl ?? "")) throw new Error("The retrieval session does not match this listing. Paste the listing text to scan manually.");
     const mapped = reconcileApifyListing(job.record, request);
     return { request: mapped.request, retrieval: { ...job.retrieval, conflicts: mapped.conflicts, photographs: mapped.photographs } };

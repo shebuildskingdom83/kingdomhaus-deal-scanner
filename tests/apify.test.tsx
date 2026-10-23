@@ -13,7 +13,7 @@ import { buildPuterPrompt } from "../src/puterPoc";
 import { equivalentListingLocations, formatScrapedDescription } from "../src/listingPresentation";
 
 const painting = paintingRows[0], concrete = concreteRows[0];
-const config = { token: "test-only-secret", maxChargeUsd: "0.25", timeoutSecs: "180" };
+const config = { token: "test-only-secret", maxChargeUsd: "0.25", timeoutSecs: "180", maxRuns: "100" };
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
 const requestId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 function scanRecord(record: Record<string, unknown>, corrections: Record<string, string> = {}) {
@@ -190,8 +190,11 @@ describe("bounded server-side Apify retrieval", () => {
       .mockResolvedValueOnce(json({ data: { status: "SUCCEEDED", defaultDatasetId: "dataset123", usageTotalUsd: 0.004 } }))
       .mockResolvedValueOnce(json([painting]));
     const service = new ApifyListingService(config, fetcher);
+    const startOwned = (value: unknown) => service.start(value, "synthetic-founder");
+    const statusOwned = (id: string) => service.status(id, "synthetic-founder");
+    const reconcileOwned = (id: string, request: import("../src/types").ScanRequest) => service.reconcile(id, request, "synthetic-founder");
     const input = { url: painting.url, paidScanConfirmed: true, requestId };
-    const [first, duplicate] = await Promise.all([service.start(input), service.start(input)]);
+    const [first, duplicate] = await Promise.all([startOwned(input), startOwned(input)]);
     expect(first).toEqual(duplicate);
     expect(fetcher).toHaveBeenCalledTimes(1);
     const [address, options] = fetcher.mock.calls[0];
@@ -202,51 +205,63 @@ describe("bounded server-side Apify retrieval", () => {
     expect(options?.headers).toMatchObject({ Authorization: `Bearer ${config.token}` });
     expect(JSON.parse(String(options?.body))).toMatchObject({ urls: [painting.url], fetchDetails: true, maxListings: 1, maxPages: 1, incrementalMode: false });
     if (!first.ok || !("status" in first)) throw new Error("Expected progress");
-    const result = await service.status(first.jobId);
+    const result = await statusOwned(first.jobId);
     expect(result.ok && "listingText" in result).toBe(true);
     expect(JSON.stringify(result)).not.toContain(config.token);
     expect(fetcher.mock.calls[2][0]).toContain("/datasets/dataset123/items?");
-    const hybrid = service.reconcile(first.jobId, { listingUrl: painting.url, listingText: "", corrections: { askingPrice: "$130,000" } });
+    const hybrid = reconcileOwned(first.jobId, { listingUrl: painting.url, listingText: "", corrections: { askingPrice: "$130,000" } });
     expect(buildLocalPreviewScan(hybrid.request).financials.askingPrice.amount).toBe(130000);
-    await service.start(input);
+    await startOwned(input);
     expect(fetcher).toHaveBeenCalledTimes(3);
   });
   it("requires confirmation, a valid listing URL and valid spending limits before any chargeable call", async () => {
     const fetcher = vi.fn<typeof fetch>();
     const service = new ApifyListingService(config, fetcher);
+    const startOwned = (value: unknown) => service.start(value, "synthetic-founder");
+    const statusOwned = (id: string) => service.status(id, "synthetic-founder");
+    const reconcileOwned = (id: string, request: import("../src/types").ScanRequest) => service.reconcile(id, request, "synthetic-founder");
     for (const url of ["https://www.bizbuysell.com/businesses-for-sale/", "https://bizbuysell.com.evil.example/business-opportunity/a/1234567/", "http://www.bizbuysell.com/business-opportunity/a/1234567/"]) {
-      expect((await service.start({ url, paidScanConfirmed: true, requestId })).ok).toBe(false);
+      expect((await startOwned({ url, paidScanConfirmed: true, requestId })).ok).toBe(false);
       expect(() => approvedBizBuySellUrl(url)).toThrow();
     }
-    expect((await service.start({ url: painting.url, requestId })).ok).toBe(false);
+    expect((await startOwned({ url: painting.url, requestId })).ok).toBe(false);
     expect(new ApifyListingService({ ...config, maxChargeUsd: "NaN" }, fetcher).settings().enabled).toBe(false);
     expect(fetcher).not.toHaveBeenCalled();
   });
   it.each([401, 402, 429, 500])("does not retry an Apify HTTP %s start failure", async (status) => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(json({ error: { message: "sensitive provider detail" } }, status));
     const service = new ApifyListingService(config, fetcher);
+    const startOwned = (value: unknown) => service.start(value, "synthetic-founder");
+    const statusOwned = (id: string) => service.status(id, "synthetic-founder");
+    const reconcileOwned = (id: string, request: import("../src/types").ScanRequest) => service.reconcile(id, request, "synthetic-founder");
     const input = { url: painting.url, paidScanConfirmed: true, requestId };
-    const result = await service.start(input);
+    const result = await startOwned(input);
     expect(result.ok).toBe(false);
     expect(JSON.stringify(result)).not.toContain("sensitive provider detail");
-    await service.start(input);
+    await startOwned(input);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("does not create a duplicate run after a status-network failure or an uncertain start", async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ data: { id: "run123" } })).mockRejectedValueOnce(new Error("offline"));
     const service = new ApifyListingService(config, fetcher);
-    const start = await service.start({ url: painting.url, paidScanConfirmed: true, requestId });
+    const startOwned = (value: unknown) => service.start(value, "synthetic-founder");
+    const statusOwned = (id: string) => service.status(id, "synthetic-founder");
+    const reconcileOwned = (id: string, request: import("../src/types").ScanRequest) => service.reconcile(id, request, "synthetic-founder");
+    const start = await startOwned({ url: painting.url, paidScanConfirmed: true, requestId });
     if (!start.ok || !("status" in start)) throw new Error("Expected progress");
-    expect((await service.status(start.jobId)).ok).toBe(false);
-    expect((await service.start({ url: painting.url, paidScanConfirmed: true, requestId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })).ok).toBe(false);
+    expect((await statusOwned(start.jobId)).ok).toBe(false);
+    expect((await startOwned({ url: painting.url, paidScanConfirmed: true, requestId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" })).ok).toBe(false);
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
   it.each(["FAILED", "TIMED-OUT", "ABORTED"])("reports terminal %s and available usage without another start", async (status) => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ data: { id: "run123" } })).mockResolvedValueOnce(json({ data: { status, usageTotalUsd: 0.003 } }));
     const service = new ApifyListingService(config, fetcher);
-    const start = await service.start({ url: painting.url, paidScanConfirmed: true, requestId });
+    const startOwned = (value: unknown) => service.start(value, "synthetic-founder");
+    const statusOwned = (id: string) => service.status(id, "synthetic-founder");
+    const reconcileOwned = (id: string, request: import("../src/types").ScanRequest) => service.reconcile(id, request, "synthetic-founder");
+    const start = await startOwned({ url: painting.url, paidScanConfirmed: true, requestId });
     if (!start.ok || !("status" in start)) throw new Error("Expected progress");
-    const result = await service.status(start.jobId);
+    const result = await statusOwned(start.jobId);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.error).toContain("$0.0030");
     expect(fetcher).toHaveBeenCalledTimes(2);
@@ -255,9 +270,12 @@ describe("bounded server-side Apify retrieval", () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValueOnce(json({ data: { id: "run123" } }))
       .mockResolvedValueOnce(json({ data: { status: "SUCCEEDED", defaultDatasetId: "dataset123" } })).mockResolvedValueOnce(json(rows));
     const service = new ApifyListingService(config, fetcher);
-    const start = await service.start({ url: painting.url, paidScanConfirmed: true, requestId });
+    const startOwned = (value: unknown) => service.start(value, "synthetic-founder");
+    const statusOwned = (id: string) => service.status(id, "synthetic-founder");
+    const reconcileOwned = (id: string, request: import("../src/types").ScanRequest) => service.reconcile(id, request, "synthetic-founder");
+    const start = await startOwned({ url: painting.url, paidScanConfirmed: true, requestId });
     if (!start.ok || !("status" in start)) throw new Error("Expected progress");
-    expect((await service.status(start.jobId)).ok).toBe(false);
+    expect((await statusOwned(start.jobId)).ok).toBe(false);
     expect(fetcher).toHaveBeenCalledTimes(3);
   });
 });

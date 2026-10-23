@@ -31,6 +31,9 @@ service-account*.json
 Thumbs.db
 Desktop.ini
 *.log
+.firebase/
+firebase.founder.local.json
+.cloud-test-artifacts/
 *.tmp
 *.bak
 *.swp

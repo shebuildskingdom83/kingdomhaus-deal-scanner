@@ -23,16 +23,19 @@ async function retrieveFixture(row: Record<string, unknown>, corrections?: Recor
     .mockResolvedValueOnce(json({ data: { id: "acceptanceRun", status: "RUNNING" } }))
     .mockResolvedValueOnce(json({ data: { status: "SUCCEEDED", defaultDatasetId: "acceptanceDataset" } }))
     .mockResolvedValueOnce(json([row]));
-  const service = new ApifyListingService({ token: "fixture-only", maxChargeUsd: "0.25", timeoutSecs: "180" }, provider);
+  const service = new ApifyListingService({ token: "fixture-only", maxChargeUsd: "0.25", timeoutSecs: "180", maxRuns: "100" }, provider);
+    const startOwned = (value: unknown) => service.start(value, "synthetic-founder");
+    const statusOwned = (id: string) => service.status(id, "synthetic-founder");
+    const reconcileOwned = (id: string, request: import("../src/types").ScanRequest) => service.reconcile(id, request, "synthetic-founder");
   const transport = vi.fn<typeof fetch>(async (url, init) => {
     if (url === "/api/retrieval-config") return json(service.settings());
-    if (url === "/api/fetch-listing") return json(await service.start(JSON.parse(String(init?.body))));
-    if (String(url).startsWith("/api/listing-retrieval/")) return json(await service.status(String(url).split("/").pop()!));
+    if (url === "/api/fetch-listing") return json(await startOwned(JSON.parse(String(init?.body))));
+    if (String(url).startsWith("/api/listing-retrieval/")) return json(await statusOwned(String(url).split("/").pop()!));
     throw new Error("Unexpected fixture endpoint");
   });
   const result = await retrieveListing(String(row.url), { fetcher: transport, confirm: () => true, progress: () => {}, wait: async () => {} });
   expect(result?.retrievalId).toBeTruthy();
-  const mapped = service.reconcile(result!.retrievalId!, { listingUrl: result!.finalUrl, listingText: result!.listingText, corrections });
+  const mapped = reconcileOwned(result!.retrievalId!, { listingUrl: result!.finalUrl, listingText: result!.listingText, corrections });
   expect(provider).toHaveBeenCalledTimes(3);
   return attachRetrieval(buildLocalPreviewScan(mapped.request), mapped.retrieval);
 }

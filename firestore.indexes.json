@@ -1,0 +1,7 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    { "collectionGroup": "acquisitions", "fieldPath": "payload", "indexes": [] },
+    { "collectionGroup": "workspace", "fieldPath": "payload", "indexes": [] }
+  ]
+}
