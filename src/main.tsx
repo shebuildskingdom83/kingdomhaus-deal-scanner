@@ -10,6 +10,6 @@ const CloudApp = lazy(() => import("./CloudApp"));
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {LocalDocumentWorkspace ? <Suspense fallback={<p role="status">Loading local synthetic documents…</p>}><LocalDocumentWorkspace /></Suspense> : window.location.pathname === "/demo" ? <PublicDemoApp /> : usesCloudWorkspace(window.location.pathname, import.meta.env.MODE) ? <Suspense fallback={<p role="status">Loading cloud workspace...</p>}><CloudApp /></Suspense> : <App />}
+    {LocalDocumentWorkspace ? <Suspense fallback={<p role="status">Loading local synthetic documents…</p>}><LocalDocumentWorkspace /></Suspense> : window.location.pathname.endsWith("/demo") ? <PublicDemoApp /> : usesCloudWorkspace(window.location.pathname, import.meta.env.MODE) ? <Suspense fallback={<p role="status">Loading cloud workspace...</p>}><CloudApp /></Suspense> : <App />}
   </StrictMode>
 );
