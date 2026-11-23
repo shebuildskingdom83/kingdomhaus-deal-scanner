@@ -80,10 +80,14 @@ function DemoRecoveryControls() {
 
 function DemoResultsView({ onReturn }: { onReturn: () => void }) {
   const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "Dicostanzo Welding Services", listingUrl: "https://www.bizbuysell.com/business-opportunity/profitable-welding-and-fabrication-shop-real-estate/2558952/", listingText: demoListingText, askingPrice: "749000", annualRevenue: "300000", advertisedCashFlow: "220000", inventory: "5000", ffe: "80000", realEstate: "450000" }));
-  const [scan, setScan] = useState(() => buildLocalPreviewScan({ businessName: form.businessName, listingUrl: form.listingUrl, listingText: form.listingText }));
+  const makeDemoScan = (corrections?: FormState) => {
+    const preview = buildLocalPreviewScan({ businessName: form.businessName, listingUrl: form.listingUrl, listingText: form.listingText, corrections });
+    return { ...preview, overview: { ...preview.overview, yearsOperating: { ...preview.overview.yearsOperating, value: null, source: "not_disclosed", excerpts: [] } } };
+  };
+  const [scan, setScan] = useState(() => makeDemoScan());
   const [founderDecision, setFounderDecision] = useState<FounderDecision>({ decision: "Pass", rationale: "", nextDiligenceAction: "" });
   const [session] = useState(() => new WorkspaceSession("public-demo", false, () => true));
-  const refresh = () => setScan(buildLocalPreviewScan({ businessName: form.businessName, listingUrl: form.listingUrl, listingText: form.listingText, corrections: form }));
+  const refresh = () => setScan(makeDemoScan(form));
   const onFieldChange = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm(current => ({ ...current, [key]: value }));
   const headerActions: ReactNode = <><button type="button" className="ghost-button cloud-header-action" onClick={onReturn}>← &nbsp; Return to Workspace</button><button type="button" className="ghost-button cloud-header-action" onClick={() => window.location.assign("./")}>⇥ &nbsp; Sign out</button></>;
   return <ResultsScreen scan={scan} form={form} message={null} errors={[]} isLoading={false} isFetchingUrl={false} onBack={onReturn} onDownload={(assumptions, decision) => downloadScanPdf(scan, assumptions, decision)} onFieldChange={onFieldChange} onRefresh={refresh} onScanFromUrl={() => {}} cashFlowAssumptions={createCashFlowAssumptions()} onCashFlowChange={() => {}} founderDecision={founderDecision} onFounderDecisionChange={setFounderDecision} recoveryControls={<DemoRecoveryControls />} headerActions={headerActions} session={session} />;
