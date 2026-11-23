@@ -13,6 +13,8 @@ export default function PublicDemoApp() {
   const [signedIn, setSignedIn] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [listingUrl, setListingUrl] = useState("");
+  const [scanMessage, setScanMessage] = useState("");
 
   if (!signedIn) {
     return <main className="app-shell public-demo-shell public-demo-auth-shell">
@@ -42,6 +44,11 @@ export default function PublicDemoApp() {
     <section className="public-demo-hero">
       <h2>Acquisition Portfolio</h2>
       <p>Review opportunities, compare financial evidence, and keep the next diligence questions in view.</p>
+      <form className="public-demo-intake" onSubmit={(event) => { event.preventDefault(); if (listingUrl.trim()) setScanMessage("Listing captured. Review the opportunity below."); }}>
+        <label><span>Start with a listing URL</span><input type="url" value={listingUrl} onChange={event => setListingUrl(event.target.value)} placeholder="https://business-for-sale.example/listing" required /></label>
+        <button className="primary-action secondary" type="submit">Scan business</button>
+        {scanMessage ? <p className="public-demo-scan-message" role="status">{scanMessage}</p> : null}
+      </form>
     </section>
     <section className="public-demo-card" aria-labelledby="demo-deal-title">
       <div className="public-demo-card-heading"><div><p className="card-kicker">ACTIVE OPPORTUNITY</p><h2 id="demo-deal-title">Specialty Manufacturing</h2><p>Central North Carolina · KH-2401</p></div><span className="status-pill">Review in progress</span></div>

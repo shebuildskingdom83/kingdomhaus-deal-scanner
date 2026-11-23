@@ -116,7 +116,13 @@ summary:focus-visible {
 .public-demo-auth-card input { min-height:46px; padding:10px 12px; border:1px solid var(--line); border-radius:5px; font:inherit; }
 .public-demo-auth-card input:focus-visible { outline:2px solid var(--gold-ink); outline-offset:2px; }
 .public-demo-auth-note { margin:22px 0 0; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; line-height:1.6; }
+.public-demo-intake { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:12px; max-width:760px; margin-top:24px; }
+.public-demo-intake label { display:grid; gap:7px; color:var(--ink); font-size:14px; }
+.public-demo-intake input { min-height:46px; padding:10px 12px; border:1px solid var(--line); border-radius:5px; font:inherit; }
+.public-demo-intake input:focus-visible { outline:2px solid var(--gold-ink); outline-offset:2px; }
+.public-demo-scan-message { grid-column:1/-1; margin:0; color:var(--slate); font-size:13px; }
 @media (max-width:620px) { .public-demo-auth-card { margin-top:36px; padding:24px; } }
+@media (max-width:620px) { .public-demo-intake { grid-template-columns:1fr; align-items:stretch; } }
 
 .app-shell {
   width: min(1500px, calc(100% - 48px));
