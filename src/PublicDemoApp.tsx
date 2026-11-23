@@ -53,6 +53,7 @@ Gross Revenue: $300000
 Cash Flow: $220000
 Location: Anderson, SC
 Industry: Metal Products > Heavy Construction
+Established: Not Disclosed
 Employees: 1 Full-time
 Services: The business specializes in architectural metalwork, handrails, structural steel modifications, commercial fabrication, repairs and field installation.
 Business Model: Product and service revenue
