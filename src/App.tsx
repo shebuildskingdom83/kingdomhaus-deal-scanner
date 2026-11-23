@@ -829,14 +829,16 @@ function matchingText(text: string, pattern: RegExp) {
 }
 
 export function AppHeader({ actions }: { activeView: "Scan" | "Report"; actions?: ReactNode }) {
+  const publicBase = typeof window !== "undefined" && window.location.pathname.startsWith("/kingdomhaus-deal-scanner") ? "/kingdomhaus-deal-scanner" : "";
   return (
     <header className="app-header" aria-label="Application header">
       <div className="brand-lockup">
-        <img className="brand-logo" src="/kingdomhaus-logo.webp" alt="KingdomHaus logo" width="112" height="84" />
+        <img className="brand-logo" src={publicBase + "/assets/brand/kingdomhaus-logo-240.webp"} alt="KingdomHaus logo" width="112" height="84" />
         <h1>Deal Scanner</h1>
       </div>
       <div className="app-header-actions">
-        <a className="kingdomhaus-home" href="/">KingdomHaus Home</a>
+        <a className="kingdomhaus-home" href={publicBase + "/"}>KingdomHaus Home</a>
+        <a className="kingdomhaus-home" href={publicBase + "/#help"}>Help &amp; Guide</a>
         {actions}
       </div>
     </header>
