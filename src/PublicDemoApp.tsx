@@ -10,12 +10,14 @@ const findings = [
 export default function PublicDemoApp() {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [tab, setTab] = useState("Analysis");
-  const [signedIn, setSignedIn] = useState(false);
-  const createMode = new URLSearchParams(window.location.search).get("mode") === "create";
+  const params = new URLSearchParams(window.location.search);
+  const guestMode = params.get("guest") === "1";
+  const [signedIn, setSignedIn] = useState(guestMode);
+  const createMode = params.get("mode") === "create";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [listingUrl, setListingUrl] = useState("");
+  const [listingUrl, setListingUrl] = useState("https://www.bizbuysell.com/Business-Opportunity/specialty-manufacturing-company/kh-2401/");
   const [scanMessage, setScanMessage] = useState("");
 
   if (!signedIn) {
@@ -35,6 +37,8 @@ export default function PublicDemoApp() {
           <button className="primary-action" type="submit">{createMode ? "Create Account" : "Open Deal Scanner"}</button>
         </form>
         <p className="public-demo-auth-note">This workspace opens directly to the acquisition portfolio. Account details are used for this session only.</p>
+        <a className="public-demo-auth-switch" href="./?guest=1">Continue without signing in</a>
+        <br />
         <a className="public-demo-auth-switch" href={createMode ? "./" : "./?mode=create"}>{createMode ? "Already have access? Sign in" : "New here? Create an account"}</a>
       </section>
     </main>;
@@ -51,6 +55,7 @@ export default function PublicDemoApp() {
       <form className="public-demo-intake" onSubmit={(event) => { event.preventDefault(); if (listingUrl.trim()) setScanMessage("Listing captured. Review the opportunity below."); }}>
         <label><span>Start with a listing URL</span><input type="url" value={listingUrl} onChange={event => setListingUrl(event.target.value)} placeholder="https://business-for-sale.example/listing" required /></label>
         <button className="primary-action secondary" type="submit">Scan business</button>
+        <p className="public-demo-intake-note">Use the included listing URL to open the prepared opportunity review.</p>
         {scanMessage ? <p className="public-demo-scan-message" role="status">{scanMessage}</p> : null}
       </form>
     </section>

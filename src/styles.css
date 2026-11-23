@@ -122,6 +122,7 @@ summary:focus-visible {
 .public-demo-intake input { min-height:46px; padding:10px 12px; border:1px solid var(--line); border-radius:5px; font:inherit; }
 .public-demo-intake input:focus-visible { outline:2px solid var(--gold-ink); outline-offset:2px; }
 .public-demo-scan-message { grid-column:1/-1; margin:0; color:var(--slate); font-size:13px; }
+.public-demo-intake-note { grid-column:1/-1; margin:0; color:var(--muted); font-size:12px; }
 @media (max-width:620px) { .public-demo-auth-card { margin-top:36px; padding:24px; } }
 @media (max-width:620px) { .public-demo-intake { grid-template-columns:1fr; align-items:stretch; } }
 
