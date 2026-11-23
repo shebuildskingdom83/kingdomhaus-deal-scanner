@@ -116,6 +116,7 @@ summary:focus-visible {
 .public-demo-auth-card input { min-height:46px; padding:10px 12px; border:1px solid var(--line); border-radius:5px; font:inherit; }
 .public-demo-auth-card input:focus-visible { outline:2px solid var(--gold-ink); outline-offset:2px; }
 .public-demo-auth-note { margin:22px 0 0; padding-top:16px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; line-height:1.6; }
+.public-demo-auth-switch { display:inline-flex; min-height:44px; align-items:center; margin-top:10px; color:var(--ink); font-size:13px; }
 .public-demo-intake { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:end; gap:12px; max-width:760px; margin-top:24px; }
 .public-demo-intake label { display:grid; gap:7px; color:var(--ink); font-size:14px; }
 .public-demo-intake input { min-height:46px; padding:10px 12px; border:1px solid var(--line); border-radius:5px; font:inherit; }

@@ -12,5 +12,8 @@ function openAnalyzer(control) {
 document.querySelectorAll('button.launch-control').forEach(openAnalyzer);
 document.querySelectorAll('[data-cloud-auth]').forEach(control => {
   control.removeAttribute('disabled');
-  control.addEventListener('click', () => { window.location.assign(analyzerUrl); });
+  control.addEventListener('click', () => {
+    const mode = control.dataset.cloudAuth === 'create' ? '?mode=create' : '';
+    window.location.assign(`${analyzerUrl}${mode}`);
+  });
 });

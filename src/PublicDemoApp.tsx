@@ -11,6 +11,8 @@ export default function PublicDemoApp() {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [tab, setTab] = useState("Analysis");
   const [signedIn, setSignedIn] = useState(false);
+  const createMode = new URLSearchParams(window.location.search).get("mode") === "create";
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [listingUrl, setListingUrl] = useState("");
@@ -24,14 +26,16 @@ export default function PublicDemoApp() {
       </header>
       <section className="public-demo-auth-card" aria-labelledby="demo-signin-title">
         <p className="eyebrow">ACQUISITION INTELLIGENCE</p>
-        <h2 id="demo-signin-title">Sign in to your workspace</h2>
-        <p>Enter any email and password to open the Deal Scanner workspace.</p>
-        <form onSubmit={(event) => { event.preventDefault(); if (email.trim() && password) setSignedIn(true); }}>
+        <h2 id="demo-signin-title">{createMode ? "Create your workspace" : "Sign in to your workspace"}</h2>
+        <p>{createMode ? "Set up a workspace to explore the Deal Scanner." : "Enter any email and password to open the Deal Scanner workspace."}</p>
+        <form onSubmit={(event) => { event.preventDefault(); if (email.trim() && password && (!createMode || name.trim())) setSignedIn(true); }}>
+          {createMode ? <label><span>Your name</span><input value={name} onChange={event => setName(event.target.value)} placeholder="Your name" autoComplete="name" required /></label> : null}
           <label><span>Email</span><input type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" required /></label>
-          <label><span>Password</span><input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Enter a password" autoComplete="current-password" required /></label>
-          <button className="primary-action" type="submit">Open Deal Scanner</button>
+          <label><span>Password</span><input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder={createMode ? "Create a password" : "Enter a password"} autoComplete={createMode ? "new-password" : "current-password"} required /></label>
+          <button className="primary-action" type="submit">{createMode ? "Create Account" : "Open Deal Scanner"}</button>
         </form>
-        <p className="public-demo-auth-note">This interview workspace opens directly to the acquisition portfolio.</p>
+        <p className="public-demo-auth-note">This workspace opens directly to the acquisition portfolio. Account details are used for this session only.</p>
+        <a className="public-demo-auth-switch" href={createMode ? "./" : "./?mode=create"}>{createMode ? "Already have access? Sign in" : "New here? Create an account"}</a>
       </section>
     </main>;
   }
