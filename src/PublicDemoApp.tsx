@@ -65,11 +65,14 @@ This fictional welding workshop is operated by one owner. The owner is also a Ce
 Ad#: 9900105`;
 
 function DemoRecoveryControls() {
-  return <section className="acquisition-recovery" aria-label="Demo acquisition saving and recovery"><div className="recovery-actions portfolio-save-state"><button type="button" className="primary-action" onClick={() => {}}><span aria-hidden="true">▣</span> Save Changes</button><span className="recovery-state" role="status">Saved</span></div><details className="saved-acquisitions"><summary>▣ &nbsp; Saved scans <span>(4)</span><span aria-hidden="true">＋</span></summary><p className="section-note">Saved scans are disabled in this public demonstration.</p></details></section>;
+  return <>
+    <section className="acquisition-recovery" aria-label="Demo acquisition saving and recovery"><div className="recovery-actions portfolio-save-state"><button type="button" className="primary-action" onClick={() => {}}><span aria-hidden="true">▣</span> Save Changes</button><span className="recovery-state" role="status">Saved</span></div><details className="saved-acquisitions"><summary>▣ &nbsp; Saved scans <span>(4)</span><span aria-hidden="true">＋</span></summary><p className="section-note">Saved scans are disabled in this public demonstration.</p></details></section>
+    <nav className="analysis-tabs" aria-label="Workspace tabs"><button className="active" type="button" aria-current="page">Analysis</button><button type="button">CIM</button><button type="button">Due Diligence</button></nav>
+  </>;
 }
 
 function DemoResultsView({ onReturn }: { onReturn: () => void }) {
-  const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "Dicostanzo Welding Services", listingUrl: "https://www.bizbuysell.com/business-opportunity/synthetic-fabrication-fixture/9900105/", listingText: demoListingText, askingPrice: "749000", annualRevenue: "300000", advertisedCashFlow: "220000", inventory: "5000", ffe: "80000", realEstate: "450000" }));
+  const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "Dicostanzo Welding Services", listingUrl: "https://www.bizbuysell.com/business-opportunity/profitable-welding-and-fabrication-shop-real-estate/2558952/", listingText: demoListingText, askingPrice: "749000", annualRevenue: "300000", advertisedCashFlow: "220000", inventory: "5000", ffe: "80000", realEstate: "450000" }));
   const [scan, setScan] = useState(() => buildLocalPreviewScan({ businessName: form.businessName, listingUrl: form.listingUrl, listingText: form.listingText }));
   const [founderDecision, setFounderDecision] = useState<FounderDecision>({ decision: "Pass", rationale: "", nextDiligenceAction: "" });
   const [session] = useState(() => new WorkspaceSession("public-demo", false, () => true));
