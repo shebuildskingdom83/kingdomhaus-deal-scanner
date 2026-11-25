@@ -1810,3 +1810,12 @@ body:has(.acquisition-workspace) { min-width:0; }
 .demo-diligence-counts{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;border-top:1px solid #ebe5da;border-bottom:1px solid #ebe5da;padding:16px 0;margin:12px 0 18px}.demo-diligence-counts div{display:flex;flex-direction:column;gap:6px}.demo-diligence-counts span{color:#50647f;font-size:14px}.demo-diligence-counts strong{font-size:28px;color:#18213b}.demo-check-status.unknown{background:#e9e9e5;color:#59605f}.demo-diligence-panel .demo-checklist{grid-template-columns:1fr}.demo-diligence-panel .demo-checklist>div{display:grid;grid-template-columns:auto 1fr;column-gap:10px;align-items:start}.demo-diligence-panel .demo-checklist>div p{grid-column:2}.demo-diligence-panel .demo-checklist>div strong{padding-top:3px}@media(max-width:560px){.demo-diligence-counts{grid-template-columns:1fr 1fr}.demo-diligence-counts div:last-child{grid-column:1/-1}.demo-diligence-panel .demo-checklist>div{display:block}.demo-diligence-panel .demo-checklist>div p{margin-left:0}}
 
 .public-demo-shell .analysis-page > .panel:has(> .diligence-overview){display:none}
+
+
+/* Public demo tab panels: keep the active tab visually and semantically distinct. */
+.public-demo-shell .analysis-tabs[role="tablist"] button[role="tab"] { position:relative; }
+.public-demo-shell .analysis-tabs[role="tablist"] button[role="tab"][aria-selected="true"] { color:#18213b; }
+.public-demo-shell .analysis-tabs[role="tablist"] button[role="tab"]:focus-visible { outline:2px solid #b99655; outline-offset:3px; }
+.public-demo-shell .portfolio-save-state button[disabled] { opacity:.62; cursor:not-allowed; }
+.public-demo-shell .portfolio-save-state .recovery-state { color:#50647f; font-weight:700; }
+.public-demo-shell .saved-acquisitions summary span:not([aria-hidden]) { margin-left:8px; color:#65748b; font-weight:500; font-size:13px; }
