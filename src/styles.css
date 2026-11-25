@@ -1819,3 +1819,9 @@ body:has(.acquisition-workspace) { min-width:0; }
 .public-demo-shell .portfolio-save-state button[disabled] { opacity:.62; cursor:not-allowed; }
 .public-demo-shell .portfolio-save-state .recovery-state { color:#50647f; font-weight:700; }
 .public-demo-shell .saved-acquisitions summary span:not([aria-hidden]) { margin-left:8px; color:#65748b; font-weight:500; font-size:13px; }
+
+
+.public-demo-badge { color:#e2c271; font-size:12px; font-weight:700; letter-spacing:.02em; white-space:nowrap; }
+.public-intake-form input:disabled,.public-intake-form textarea:disabled { opacity:.72; cursor:not-allowed; background:#f4f0e8; }
+.public-demo-shell .public-intake-form .primary-action:disabled { opacity:.6; cursor:not-allowed; }
+@media(max-width:760px) { .public-demo-badge { order:3; flex-basis:100%; } }
