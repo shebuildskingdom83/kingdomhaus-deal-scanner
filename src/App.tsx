@@ -339,6 +339,7 @@ export function ResultsScreen(props: {
   recoveryControls?: ReactNode;
   headerActions?: ReactNode;
   session?: WorkspaceSession;
+  hideDueDiligence?: boolean;
 }) {
   const { scan } = props;
   const beginAnalysis = useWorkspaceOperation(props.session, scan.id);
@@ -664,9 +665,9 @@ export function ResultsScreen(props: {
         </div>
       </Panel>
 
-      <Panel title="Due Diligence">
+      {props.hideDueDiligence ? null : <Panel title="Due Diligence">
         <DiligenceDetails key={scan.id} rows={buildDiligenceRows(scan)} />
-      </Panel>
+      </Panel>}
       <footer className="report-disclaimer">
         <p>{resultsDisclaimer}</p>
         <details><summary>About this preliminary screen</summary><p>Keep Reading is a screening recommendation, not acquisition approval. Confirm source documents, ownership, transfer requirements, operating responsibilities, and financial assumptions with qualified advisers. Hypothetical savings and estimated cash remaining are not guaranteed distributions.</p></details>
