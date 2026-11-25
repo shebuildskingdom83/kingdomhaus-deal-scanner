@@ -340,6 +340,7 @@ export function ResultsScreen(props: {
   headerActions?: ReactNode;
   session?: WorkspaceSession;
   hideDueDiligence?: boolean;
+  publicDemoTab?: "Analysis" | "CIM" | "Due Diligence";
 }) {
   const { scan } = props;
   const beginAnalysis = useWorkspaceOperation(props.session, scan.id);
@@ -521,6 +522,7 @@ export function ResultsScreen(props: {
 
       {props.recoveryControls}
 
+      {(!props.publicDemoTab || props.publicDemoTab === "Analysis") ? <>
       <Panel title="Business Profile">
         {scan.retrieval ? <ListingPhotographs photographs={scan.retrieval.photographs} /> : null}
         <BusinessWebsiteProjectGallery scan={scan} />
@@ -626,7 +628,7 @@ export function ResultsScreen(props: {
             {puterPoc.isLoading ? "Analyzing deal" : "KingdomHaus Intelligence™ — Analyze Deal"}
           </button>
         </section>
-        {!puterAllowed ? <p role="status">AI deal analysis is available to the founder only during the pilot.</p> : null}
+        {!puterAllowed ? <p role="status">AI deal analysis is intentionally disabled in this public demonstration.</p> : null}
         {puterConfirmationOpen && puterAllowed ? (
           <div className="ai-confirmation" aria-live="polite">
             <p>This optional analysis uses an external AI service. Sign-in may be required. Usage may consume your allowance or incur charges on that account. Continue only if you accept those charges.</p>
@@ -664,6 +666,8 @@ export function ResultsScreen(props: {
           ) : null}
         </div>
       </Panel>
+
+      </> : null}
 
       {props.hideDueDiligence ? null : <Panel title="Due Diligence">
         <DiligenceDetails key={scan.id} rows={buildDiligenceRows(scan)} />
