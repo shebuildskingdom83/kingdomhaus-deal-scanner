@@ -33,7 +33,7 @@ export default function PublicDemoApp() {
   const [tab, setTab] = useState("Analysis");
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
-  const [listingUrl, setListingUrl] = useState("https://example.com/kingdomhaus-demo/summitforge-industrial-fabrication");
+  const [listingUrl, setListingUrl] = useState("");
   const [scanMessage, setScanMessage] = useState("");
   const [search, setSearch] = useState("");
 
@@ -46,7 +46,7 @@ export default function PublicDemoApp() {
 function PublicHeader({ compact = false, onReturn }: { compact?: boolean; onReturn?: () => void }) { return <header className="workspace-header"><a href={compact ? "../" : "#"}><img src="/kingdomhaus-deal-scanner/assets/brand/kingdomhaus-logo-240.webp" alt="KingdomHaus" /></a><nav><a href="../">Home</a><a href="../#help">Help &amp; Guide</a>{onReturn ? <button type="button" onClick={onReturn}>← &nbsp; Return to Workspace</button> : null}<button type="button" onClick={() => window.location.assign("../")}>⇥ &nbsp; Sign out</button></nav></header>; }
 function IntakeView({ listingUrl, setListingUrl, onScan, scanMessage }: { listingUrl: string; setListingUrl: (value: string) => void; onScan: () => void; scanMessage: string }) { return <section className="intake-layout public-intake-layout"><div className="intro-panel"><p className="eyebrow">ACQUISITION INTELLIGENCE</p><h2>Screen business listings with discipline.</h2><p>Capture the listing, preserve the evidence, and focus on the diligence questions that matter before deeper review.</p><div className="notice">Preliminary screen only. The scanner supports diligence; it does not approve acquisitions.</div></div><form className="intake-form public-intake-form" onSubmit={event => { event.preventDefault(); onScan(); }}><div className="form-section"><h2>Listing Intake</h2><p>Start with a public listing URL or paste the full listing text when access is blocked.</p></div><div className="scan-card"><label><span>Business name</span><input placeholder="Optional" /></label><label><span>Business Website (optional)</span><input placeholder="https://business.example.com/" /></label></div><div className="scan-card"><label><span>Listing URL</span><input type="url" value={listingUrl} onChange={event => setListingUrl(event.target.value)} /></label><button className="primary-action secondary" type="button" onClick={onScan}>⌁ &nbsp; Scan from URL</button></div><div className="scan-card primary-scan-card"><textarea aria-label="Listing text" placeholder="Paste complete business listing here..." rows={12} /></div><button className="primary-action" type="submit">⌕ &nbsp; Scan business</button>{scanMessage ? <p className="public-demo-scan-message" role="status">{scanMessage}</p> : null}</form></section>; }
 const demoListingText = `SummitForge Industrial Fabrication
-Business Website: https://example.com/summitforge-industrial-fabrication
+Business Website: Demo profile available on request
 Street Address: 1840 Meridian Industrial Drive, Greenville, SC 29607
 Asking Price: $1250000
 Gross Revenue: $1800000
@@ -88,7 +88,7 @@ function DemoRecoveryControls() {
 }
 
 function DemoResultsView({ onReturn }: { onReturn: () => void }) {
-  const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "SummitForge Industrial Fabrication", listingUrl: "https://example.com/kingdomhaus-demo/summitforge-industrial-fabrication", listingText: demoListingText, askingPrice: "1250000", annualRevenue: "1800000", sde: "310000", ebitda: "240000", advertisedCashFlow: "380000", inventory: "35000", ffe: "180000", realEstate: "620000" }));
+  const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "SummitForge Industrial Fabrication", listingUrl: "", listingText: demoListingText, askingPrice: "1250000", annualRevenue: "1800000", sde: "310000", ebitda: "240000", advertisedCashFlow: "380000", inventory: "35000", ffe: "180000", realEstate: "620000" }));
   const makeDemoScan = (corrections?: FormState) => buildLocalPreviewScan({
     businessName: form.businessName,
     listingUrl: form.listingUrl,
