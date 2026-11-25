@@ -46,7 +46,7 @@ export default function PublicDemoApp() {
 function PublicHeader({ compact = false, onReturn }: { compact?: boolean; onReturn?: () => void }) { return <header className="workspace-header"><a href={compact ? "../" : "#"}><img src="/kingdomhaus-deal-scanner/assets/brand/kingdomhaus-logo-240.webp" alt="KingdomHaus" /></a><nav><a href="../">Home</a><a href="../#help">Help &amp; Guide</a>{onReturn ? <button type="button" onClick={onReturn}>← &nbsp; Return to Workspace</button> : null}<button type="button" onClick={() => window.location.assign("../")}>⇥ &nbsp; Sign out</button></nav></header>; }
 function IntakeView({ listingUrl, setListingUrl, onScan, scanMessage }: { listingUrl: string; setListingUrl: (value: string) => void; onScan: () => void; scanMessage: string }) { return <section className="intake-layout public-intake-layout"><div className="intro-panel"><p className="eyebrow">ACQUISITION INTELLIGENCE</p><h2>Screen business listings with discipline.</h2><p>Capture the listing, preserve the evidence, and focus on the diligence questions that matter before deeper review.</p><div className="notice">Preliminary screen only. The scanner supports diligence; it does not approve acquisitions.</div></div><form className="intake-form public-intake-form" onSubmit={event => { event.preventDefault(); onScan(); }}><div className="form-section"><h2>Listing Intake</h2><p>Start with a public listing URL or paste the full listing text when access is blocked.</p></div><div className="scan-card"><label><span>Business name</span><input placeholder="Optional" /></label><label><span>Business Website (optional)</span><input placeholder="https://business.example.com/" /></label></div><div className="scan-card"><label><span>Listing URL</span><input type="url" value={listingUrl} onChange={event => setListingUrl(event.target.value)} /></label><button className="primary-action secondary" type="button" onClick={onScan}>⌁ &nbsp; Scan from URL</button></div><div className="scan-card primary-scan-card"><textarea aria-label="Listing text" placeholder="Paste complete business listing here..." rows={12} /></div><button className="primary-action" type="submit">⌕ &nbsp; Scan business</button>{scanMessage ? <p className="public-demo-scan-message" role="status">{scanMessage}</p> : null}</form></section>; }
 const demoListingText = `SummitForge Industrial Fabrication
-Business Website: Demo profile available on request
+Business Website: Synthetic demo profile (no external website)
 Street Address: 1840 Meridian Industrial Drive, Greenville, SC 29607
 Asking Price: $1250000
 Gross Revenue: $1800000
@@ -61,7 +61,7 @@ Services: Custom structural steel, architectural metalwork, commercial fabricati
 Business Model: Product and service revenue
 Customer Segments: General contractors, industrial operators, healthcare facilities and regional developers.
 Owner Involvement: The business is led by a working owner who manages estimating, quality control and key customer relationships. A documented transition plan and cross-training program are available to the buyer.
-Facilities: 18,000-square-foot leased fabrication facility with CNC plasma cutting, welding bays, finishing space, loading access and approximately $180,000 of included equipment.
+Facilities: 18,000-square-foot owned fabrication facility with CNC plasma cutting, welding bays, finishing space, loading access and approximately $180,000 of included equipment.
 Competition: Established regional demand for commercial fabrication and structural installation. The company competes on responsiveness, field capability and repeat contractor relationships.
 Growth & Expansion: Add a second installation crew, increase estimating capacity, expand maintenance contracts and pursue larger regional design-build packages.
 Reason for Selling: Retirement
@@ -74,19 +74,54 @@ Business Description
 SummitForge Industrial Fabrication is a profitable commercial metal fabrication and installation company serving the Upstate South Carolina market. The operation combines recurring contractor relationships with project-based fabrication, field installation and maintenance work. Its documented processes, capable production team and modern equipment create a platform for continued growth through staffing, larger projects and expanded service coverage.
 Ad#: 880024`;
 
-function DemoRecoveryControls() {
-  const [activeTab, setActiveTab] = useState<"Analysis" | "CIM" | "Due Diligence">("Analysis");
+type DemoTab = "Analysis" | "CIM" | "Due Diligence";
+
+const demoDiligenceChecks = [
+  { status: "watch", label: "Financial verification", explanation: "Verify SDE, EBITDA, add-backs, tax returns, and whether advertised cash flow matches actual free cash flow." },
+  { status: "watch", label: "Equipment condition and continuity", explanation: "FF&E appears included in the asking price. Verify condition, remaining useful life, liens or loans, maintenance history, and replacement exposure." },
+  { status: "watch", label: "Seller transition", explanation: "Review the documented 90-day transition with estimating, quoting, safety and customer handoff procedures." },
+  { status: "ready", label: "Financial package", explanation: "Three years of statements, tax returns, and add-back schedule requested." },
+  { status: "unknown", label: "Owner and key-person dependence", explanation: "Confirm responsibilities, working hours, and post-close coverage." },
+  { status: "unknown", label: "Customer concentration", explanation: "Request customer revenue mix and top-customer exposure." },
+  { status: "unknown", label: "Equipment loans and liens", explanation: "Confirm title releases, payoff obligations, and any equipment debt." },
+  { status: "unknown", label: "Supplier dependence", explanation: "Verify vendors, terms, and single-source exposure." },
+  { status: "unknown", label: "Working capital and immediate capital needs", explanation: "Verify inventory, deposits, deferred maintenance, and closing cash needs." },
+] as const;
+
+function DemoRecoveryControls({ activeTab, onTabChange }: { activeTab: DemoTab; onTabChange: (tab: DemoTab) => void }) {
+  const watchCount = demoDiligenceChecks.filter(check => check.status === "watch").length;
+  const unknownCount = demoDiligenceChecks.filter(check => check.status === "unknown").length;
   return <>
-    <section className="acquisition-recovery" aria-label="Demo acquisition saving and recovery"><div className="recovery-actions portfolio-save-state"><button type="button" className="primary-action" onClick={() => {}}><span aria-hidden="true">▣</span> Save Changes</button><span className="recovery-state" role="status">Saved</span></div><details className="saved-acquisitions"><summary>▣ &nbsp; Saved scans <span>(4)</span><span aria-hidden="true">＋</span></summary><p className="section-note">Saved scans are disabled in this public demonstration.</p></details></section>
-    <nav className="analysis-tabs" aria-label="Workspace tabs">
-      {(["Analysis", "CIM", "Due Diligence"] as const).map(tab => <button key={tab} className={activeTab === tab ? "active" : undefined} type="button" aria-current={activeTab === tab ? "page" : undefined} onClick={() => setActiveTab(tab)}>{tab}</button>)}
+    <section className="acquisition-recovery" aria-label="Public demo recovery controls">
+      <div className="recovery-actions portfolio-save-state">
+        <button type="button" className="primary-action" disabled aria-disabled="true"><span aria-hidden="true">▣</span> Save Changes</button>
+        <span className="recovery-state" role="status">Read-only demo</span>
+      </div>
+      <details className="saved-acquisitions">
+        <summary>▣ &nbsp; Saved scans <span>Sample data</span><span aria-hidden="true">＋</span></summary>
+        <p className="section-note">Saved scans are disabled in this public demonstration. Changes are not persisted.</p>
+      </details>
+    </section>
+    <nav className="analysis-tabs" aria-label="Workspace tabs" role="tablist">
+      {(["Analysis", "CIM", "Due Diligence"] as const).map(tab => (
+        <button
+          key={tab}
+          id={`demo-tab-${tab.toLowerCase().replaceAll(" ", "-")}`}
+          className={activeTab === tab ? "active" : undefined}
+          type="button"
+          role="tab"
+          aria-selected={activeTab === tab}
+          aria-controls={`demo-panel-${tab.toLowerCase().replaceAll(" ", "-")}`}
+          tabIndex={activeTab === tab ? 0 : -1}
+          onClick={() => onTabChange(tab)}
+        >{tab}</button>
+      ))}
     </nav>
-    {activeTab === "CIM" ? <section className="demo-tab-panel" aria-labelledby="demo-cim-title"><h2 id="demo-cim-title">Confidential Information Memorandum</h2><p>SummitForge Industrial Fabrication is a Greenville-based metal fabrication platform with recurring contractor relationships, a trained seven-person team, and a documented transition plan.</p><div className="demo-tab-grid"><div><strong>Transaction thesis</strong><p>Acquire a profitable regional operator and expand installation capacity, maintenance contracts, and design-build work.</p></div><div><strong>Buyer focus</strong><p>Validate customer concentration, backlog quality, equipment condition, and the lease renewal path.</p></div></div></section> : null}
-    {activeTab === "Due Diligence" ? <section className="demo-tab-panel demo-diligence-panel" aria-labelledby="demo-dd-title"><h2 id="demo-dd-title">Due Diligence</h2><div className="demo-diligence-counts"><div><span>Total checks</span><strong>9</strong></div><div><span>Watch</span><strong>3</strong></div><div><span>Unknown / missing information</span><strong>6</strong></div></div><p className="section-note">Synthetic interview checklist for the public demonstration.</p><div className="demo-checklist"><div><span className="demo-check-status verify">WATCH</span><strong>Financial verification</strong><p>Verify SDE, EBITDA, add-backs, tax returns, and whether advertised cash flow matches actual free cash flow.</p></div><div><span className="demo-check-status verify">WATCH</span><strong>Equipment condition and continuity</strong><p>FF&amp;E appears included in the asking price. Verify condition, remaining useful life, liens or loans, maintenance history, and replacement exposure.</p></div><div><span className="demo-check-status verify">WATCH</span><strong>Seller transition</strong><p>Review the documented 90-day transition with estimating, quoting, safety and customer handoff procedures.</p></div><div><span className="demo-check-status ready">READY</span><strong>Financial package</strong><p>Three years of statements, tax returns, and add-back schedule requested.</p></div><div><span className="demo-check-status unknown">UNKNOWN</span><strong>Owner and key-person dependence</strong><p>Confirm responsibilities, working hours, and post-close coverage.</p></div><div><span className="demo-check-status unknown">UNKNOWN</span><strong>Customer concentration</strong><p>Request customer revenue mix and top-customer exposure.</p></div><div><span className="demo-check-status unknown">UNKNOWN</span><strong>Equipment loans and liens</strong><p>Confirm title releases, payoff obligations, and any equipment debt.</p></div><div><span className="demo-check-status unknown">UNKNOWN</span><strong>Supplier dependence</strong><p>Verify vendors, terms, and single-source exposure.</p></div><div><span className="demo-check-status unknown">UNKNOWN</span><strong>Working capital and immediate capital needs</strong><p>Verify inventory, deposits, deferred maintenance, and closing cash needs.</p></div></div></section> : null}
-    <section className="demo-project-gallery" aria-labelledby="demo-gallery-title"><div className="demo-gallery-heading"><h2 id="demo-gallery-title">Project gallery</h2><span>Synthetic showcase images</span></div><div className="demo-gallery-grid">{["Structural steel package","Custom stair and rail","CNC cut components","Field installation"].map((caption, index) => <figure key={caption}><div className={`demo-gallery-art demo-gallery-art-${index + 1}`} role="img" aria-label={`Synthetic project photo: ${caption}`} /><figcaption>{caption}</figcaption></figure>)}</div></section>
+    {activeTab === "CIM" ? <section id="demo-panel-cim" className="demo-tab-panel" role="tabpanel" tabIndex={0} aria-labelledby="demo-tab-cim"><h2 id="demo-cim-title">Confidential Information Memorandum</h2><p>SummitForge Industrial Fabrication is a Greenville-based metal fabrication platform with recurring contractor relationships, a trained seven-person team, and a documented transition plan.</p><div className="demo-tab-grid"><div><strong>Transaction thesis</strong><p>Acquire a profitable regional operator and expand installation capacity, maintenance contracts, and design-build work.</p></div><div><strong>Buyer focus</strong><p>Validate customer concentration, backlog quality, equipment condition, property title, and transfer terms.</p></div></div></section> : null}
+    {activeTab === "Due Diligence" ? <section id="demo-panel-due-diligence" className="demo-tab-panel demo-diligence-panel" role="tabpanel" tabIndex={0} aria-labelledby="demo-tab-due-diligence"><h2 id="demo-dd-title">Due Diligence</h2><div className="demo-diligence-counts"><div><span>Total checks</span><strong>{demoDiligenceChecks.length}</strong></div><div><span>Watch</span><strong>{watchCount}</strong></div><div><span>Unknown / missing information</span><strong>{unknownCount}</strong></div></div><p className="section-note">Synthetic interview checklist for the public demonstration.</p><div className="demo-checklist">{demoDiligenceChecks.map(check => <div key={check.label}><span className={`demo-check-status ${check.status === "watch" ? "verify" : check.status}`}>{check.status.toUpperCase()}</span><strong>{check.label}</strong><p>{check.explanation}</p></div>)}</div></section> : null}
+    {activeTab === "Analysis" ? <section id="demo-panel-analysis" className="demo-project-gallery" role="tabpanel" tabIndex={0} aria-labelledby="demo-tab-analysis"><div className="demo-gallery-heading"><h2 id="demo-gallery-title">Project gallery</h2><span>Synthetic showcase images</span></div><div className="demo-gallery-grid">{["Structural steel package","Custom stair and rail","CNC cut components","Field installation"].map((caption, index) => <figure key={caption}><div className={`demo-gallery-art demo-gallery-art-${index + 1}`} role="img" aria-label={`Synthetic project photo: ${caption}`} /><figcaption>{caption}</figcaption></figure>)}</div></section> : null}
   </>;
 }
-
 function DemoResultsView({ onReturn }: { onReturn: () => void }) {
   const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "SummitForge Industrial Fabrication", listingUrl: "", listingText: demoListingText, askingPrice: "1250000", annualRevenue: "1800000", sde: "310000", ebitda: "240000", advertisedCashFlow: "380000", inventory: "35000", ffe: "180000", realEstate: "620000" }));
   const makeDemoScan = (corrections?: FormState) => {
@@ -103,6 +138,11 @@ function DemoResultsView({ onReturn }: { onReturn: () => void }) {
         customerSegments: { ...preview.overview.customerSegments, value: "General contractors, industrial operators, healthcare facilities and regional developers.", source: "seller_claim" },
         ownerInvolvement: { ...preview.overview.ownerInvolvement, value: "Working owner leads estimating, quality control and key customer relationships; documented cross-training supports a 90-day transition.", source: "seller_claim" }
       },
+      financials: {
+        ...preview.financials,
+        equipmentReplacementNeeds: { ...preview.financials.equipmentReplacementNeeds, value: "FF&E appears included in the asking price. Verify equipment condition, remaining useful life, maintenance history, liens or loans, payoff requirements, and replacement exposure." },
+        immediateCapitalNeeds: { ...preview.financials.immediateCapitalNeeds, value: "Working capital, debt, liens, and deferred maintenance are not disclosed; verify before closing." }
+      },
       businessDetails: {
         ...preview.businessDetails,
         sellerSupportTraining: { ...preview.businessDetails.sellerSupportTraining, value: "90-day transition with documented estimating, quoting, safety and customer handoff procedures.", source: "seller_claim" }
@@ -110,10 +150,11 @@ function DemoResultsView({ onReturn }: { onReturn: () => void }) {
     };
   };
   const [scan, setScan] = useState(() => makeDemoScan());
+  const [demoTab, setDemoTab] = useState<DemoTab>("Analysis");
   const [founderDecision, setFounderDecision] = useState<FounderDecision>({ decision: "Continue Reviewing", rationale: "", nextDiligenceAction: "" });
   const [session] = useState(() => new WorkspaceSession("public-demo", false, () => true));
   const refresh = () => setScan(makeDemoScan(form));
   const onFieldChange = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm(current => ({ ...current, [key]: value }));
   const headerActions: ReactNode = <><button type="button" className="ghost-button cloud-header-action" onClick={onReturn}>← &nbsp; Return to Workspace</button><button type="button" className="ghost-button cloud-header-action" onClick={() => window.location.assign("./")}>⇥ &nbsp; Sign out</button></>;
-  return <ResultsScreen scan={scan} form={form} message={null} errors={[]} isLoading={false} isFetchingUrl={false} onBack={onReturn} onDownload={(assumptions, decision) => downloadScanPdf(scan, assumptions, decision)} onFieldChange={onFieldChange} onRefresh={refresh} onScanFromUrl={() => {}} cashFlowAssumptions={createCashFlowAssumptions()} onCashFlowChange={() => {}} founderDecision={founderDecision} onFounderDecisionChange={setFounderDecision} recoveryControls={<DemoRecoveryControls />} headerActions={headerActions} session={session} hideDueDiligence={true} />;
+  return <ResultsScreen scan={scan} form={form} message={null} errors={[]} isLoading={false} isFetchingUrl={false} onBack={onReturn} onDownload={(assumptions, decision) => downloadScanPdf(scan, assumptions, decision)} onFieldChange={onFieldChange} onRefresh={refresh} onScanFromUrl={() => {}} cashFlowAssumptions={createCashFlowAssumptions()} onCashFlowChange={() => {}} founderDecision={founderDecision} onFounderDecisionChange={setFounderDecision} recoveryControls={<DemoRecoveryControls activeTab={demoTab} onTabChange={setDemoTab} />} headerActions={headerActions} session={session} hideDueDiligence={true} publicDemoTab={demoTab} />;
 }
