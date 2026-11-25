@@ -89,14 +89,28 @@ function DemoRecoveryControls() {
 
 function DemoResultsView({ onReturn }: { onReturn: () => void }) {
   const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "SummitForge Industrial Fabrication", listingUrl: "", listingText: demoListingText, askingPrice: "1250000", annualRevenue: "1800000", sde: "310000", ebitda: "240000", advertisedCashFlow: "380000", inventory: "35000", ffe: "180000", realEstate: "620000" }));
-  const makeDemoScan = (corrections?: FormState) => buildLocalPreviewScan({
-    businessName: form.businessName,
-    listingUrl: form.listingUrl,
-    listingText: form.listingText,
-    corrections
-  });
+  const makeDemoScan = (corrections?: FormState) => {
+    const preview = buildLocalPreviewScan({
+      businessName: form.businessName,
+      listingUrl: form.listingUrl,
+      listingText: form.listingText,
+      corrections
+    });
+    return {
+      ...preview,
+      overview: {
+        ...preview.overview,
+        customerSegments: { ...preview.overview.customerSegments, value: "General contractors, industrial operators, healthcare facilities and regional developers.", source: "seller_claim" },
+        ownerInvolvement: { ...preview.overview.ownerInvolvement, value: "Working owner leads estimating, quality control and key customer relationships; documented cross-training supports a 90-day transition.", source: "seller_claim" }
+      },
+      businessDetails: {
+        ...preview.businessDetails,
+        sellerSupportTraining: { ...preview.businessDetails.sellerSupportTraining, value: "90-day transition with documented estimating, quoting, safety and customer handoff procedures.", source: "seller_claim" }
+      }
+    };
+  };
   const [scan, setScan] = useState(() => makeDemoScan());
-  const [founderDecision, setFounderDecision] = useState<FounderDecision>({ decision: "Reviewing", rationale: "", nextDiligenceAction: "" });
+  const [founderDecision, setFounderDecision] = useState<FounderDecision>({ decision: "Continue Reviewing", rationale: "", nextDiligenceAction: "" });
   const [session] = useState(() => new WorkspaceSession("public-demo", false, () => true));
   const refresh = () => setScan(makeDemoScan(form));
   const onFieldChange = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm(current => ({ ...current, [key]: value }));
