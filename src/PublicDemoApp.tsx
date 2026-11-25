@@ -83,10 +83,12 @@ function DemoRecoveryControls() {
 
 function DemoResultsView({ onReturn }: { onReturn: () => void }) {
   const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "Northstar Metalworks & Fabrication", listingUrl: "https://example.com/kingdomhaus-demo/northstar-metalworks", listingText: demoListingText, askingPrice: "1250000", annualRevenue: "1800000", sde: "310000", ebitda: "240000", advertisedCashFlow: "380000", inventory: "35000", ffe: "180000", realEstate: "" }));
-  const makeDemoScan = (corrections?: FormState) => {
-    const preview = buildLocalPreviewScan({ businessName: form.businessName, listingUrl: form.listingUrl, listingText: form.listingText, corrections });
-    return { ...preview, overview: { ...preview.overview, yearsOperating: { ...preview.overview.yearsOperating, value: null, source: "not_disclosed", excerpts: [] } } };
-  };
+  const makeDemoScan = (corrections?: FormState) => buildLocalPreviewScan({
+    businessName: form.businessName,
+    listingUrl: form.listingUrl,
+    listingText: form.listingText,
+    corrections
+  });
   const [scan, setScan] = useState(() => makeDemoScan());
   const [founderDecision, setFounderDecision] = useState<FounderDecision>({ decision: "Pass", rationale: "", nextDiligenceAction: "" });
   const [session] = useState(() => new WorkspaceSession("public-demo", false, () => true));
