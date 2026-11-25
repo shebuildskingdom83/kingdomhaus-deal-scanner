@@ -17,7 +17,7 @@ const findings = [
   { metric: "Advertised cash flow", current: "$100,000", seller: "—", status: "Missing" },
 ];
 const opportunities = [
-  ["Northstar Metalworks & Fabrication", "Metal Products > Heavy Construction · Greenville, SC", "$1,250,000", "11/25/2026"],
+  ["SummitForge Industrial Fabrication", "Metal Products > Heavy Construction · Greenville, SC", "$1,250,000", "11/25/2026"],
   ["Design Center Platform", "Building Material and Hardware Stores > Other · Charleston County, SC", "$4,500,000", "10/21/2026"],
   ["Well Established, Highly Profitable Printing and Packaging Company", "Printing and packaging · Torrance, CA", "$3,500,000", "10/19/2026"],
   ["Apex HVAC Services", "", "$850,000", "10/19/2026"],
@@ -33,7 +33,7 @@ export default function PublicDemoApp() {
   const [tab, setTab] = useState("Analysis");
   const [evidenceOpen, setEvidenceOpen] = useState(false);
   const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
-  const [listingUrl, setListingUrl] = useState("https://example.com/kingdomhaus-demo/northstar-metalworks");
+  const [listingUrl, setListingUrl] = useState("https://example.com/kingdomhaus-demo/summitforge-industrial-fabrication");
   const [scanMessage, setScanMessage] = useState("");
   const [search, setSearch] = useState("");
 
@@ -45,8 +45,8 @@ export default function PublicDemoApp() {
 
 function PublicHeader({ compact = false, onReturn }: { compact?: boolean; onReturn?: () => void }) { return <header className="workspace-header"><a href={compact ? "../" : "#"}><img src="/kingdomhaus-deal-scanner/assets/brand/kingdomhaus-logo-240.webp" alt="KingdomHaus" /></a><nav><a href="../">Home</a><a href="../#help">Help &amp; Guide</a>{onReturn ? <button type="button" onClick={onReturn}>← &nbsp; Return to Workspace</button> : null}<button type="button" onClick={() => window.location.assign("../")}>⇥ &nbsp; Sign out</button></nav></header>; }
 function IntakeView({ listingUrl, setListingUrl, onScan, scanMessage }: { listingUrl: string; setListingUrl: (value: string) => void; onScan: () => void; scanMessage: string }) { return <section className="intake-layout public-intake-layout"><div className="intro-panel"><p className="eyebrow">ACQUISITION INTELLIGENCE</p><h2>Screen business listings with discipline.</h2><p>Capture the listing, preserve the evidence, and focus on the diligence questions that matter before deeper review.</p><div className="notice">Preliminary screen only. The scanner supports diligence; it does not approve acquisitions.</div></div><form className="intake-form public-intake-form" onSubmit={event => { event.preventDefault(); onScan(); }}><div className="form-section"><h2>Listing Intake</h2><p>Start with a public listing URL or paste the full listing text when access is blocked.</p></div><div className="scan-card"><label><span>Business name</span><input placeholder="Optional" /></label><label><span>Business Website (optional)</span><input placeholder="https://business.example.com/" /></label></div><div className="scan-card"><label><span>Listing URL</span><input type="url" value={listingUrl} onChange={event => setListingUrl(event.target.value)} /></label><button className="primary-action secondary" type="button" onClick={onScan}>⌁ &nbsp; Scan from URL</button></div><div className="scan-card primary-scan-card"><textarea aria-label="Listing text" placeholder="Paste complete business listing here..." rows={12} /></div><button className="primary-action" type="submit">⌕ &nbsp; Scan business</button>{scanMessage ? <p className="public-demo-scan-message" role="status">{scanMessage}</p> : null}</form></section>; }
-const demoListingText = `Northstar Metalworks & Fabrication
-Business Website: https://example.com/northstar-metalworks
+const demoListingText = `SummitForge Industrial Fabrication
+Business Website: https://example.com/summitforge-industrial-fabrication
 Street Address: 1840 Meridian Industrial Drive, Greenville, SC 29607
 Asking Price: $1250000
 Gross Revenue: $1800000
@@ -68,21 +68,27 @@ Reason for Selling: Retirement
 Broker Name: Avery Morgan
 Inventory: $35000
 FF&E: $180000
-Real Estate: Not Disclosed
+Real Estate: $620000 Included
 Financing: Seller financing may be available to a qualified buyer.
 Business Description
-Northstar Metalworks & Fabrication is a profitable commercial metal fabrication and installation company serving the Upstate South Carolina market. The operation combines recurring contractor relationships with project-based fabrication, field installation and maintenance work. Its documented processes, capable production team and modern equipment create a platform for continued growth through staffing, larger projects and expanded service coverage.
+SummitForge Industrial Fabrication is a profitable commercial metal fabrication and installation company serving the Upstate South Carolina market. The operation combines recurring contractor relationships with project-based fabrication, field installation and maintenance work. Its documented processes, capable production team and modern equipment create a platform for continued growth through staffing, larger projects and expanded service coverage.
 Ad#: 880024`;
 
 function DemoRecoveryControls() {
+  const [activeTab, setActiveTab] = useState<"Analysis" | "CIM" | "Due Diligence">("Analysis");
   return <>
     <section className="acquisition-recovery" aria-label="Demo acquisition saving and recovery"><div className="recovery-actions portfolio-save-state"><button type="button" className="primary-action" onClick={() => {}}><span aria-hidden="true">▣</span> Save Changes</button><span className="recovery-state" role="status">Saved</span></div><details className="saved-acquisitions"><summary>▣ &nbsp; Saved scans <span>(4)</span><span aria-hidden="true">＋</span></summary><p className="section-note">Saved scans are disabled in this public demonstration.</p></details></section>
-    <nav className="analysis-tabs" aria-label="Workspace tabs"><button className="active" type="button" aria-current="page">Analysis</button><button type="button">CIM</button><button type="button">Due Diligence</button></nav>
+    <nav className="analysis-tabs" aria-label="Workspace tabs">
+      {(["Analysis", "CIM", "Due Diligence"] as const).map(tab => <button key={tab} className={activeTab === tab ? "active" : undefined} type="button" aria-current={activeTab === tab ? "page" : undefined} onClick={() => setActiveTab(tab)}>{tab}</button>)}
+    </nav>
+    {activeTab === "CIM" ? <section className="demo-tab-panel" aria-labelledby="demo-cim-title"><h2 id="demo-cim-title">Confidential Information Memorandum</h2><p>SummitForge Industrial Fabrication is a Greenville-based metal fabrication platform with recurring contractor relationships, a trained seven-person team, and a documented transition plan.</p><div className="demo-tab-grid"><div><strong>Transaction thesis</strong><p>Acquire a profitable regional operator and expand installation capacity, maintenance contracts, and design-build work.</p></div><div><strong>Buyer focus</strong><p>Validate customer concentration, backlog quality, equipment condition, and the lease renewal path.</p></div></div></section> : null}
+    {activeTab === "Due Diligence" ? <section className="demo-tab-panel" aria-labelledby="demo-dd-title"><h2 id="demo-dd-title">Due Diligence</h2><p className="section-note">Synthetic interview checklist for the public demonstration.</p><div className="demo-checklist"><div><span className="demo-check-status ready">READY</span><strong>Financial package</strong><p>Three years of statements, tax returns, and add-back schedule requested.</p></div><div><span className="demo-check-status verify">VERIFY</span><strong>Customers and backlog</strong><p>Confirm top-customer mix, renewal rates, and signed backlog.</p></div><div><span className="demo-check-status verify">VERIFY</span><strong>Assets and lease</strong><p>Reconcile the $180,000 equipment schedule and confirm lease terms.</p></div><div><span className="demo-check-status ready">READY</span><strong>Transition plan</strong><p>Review the documented 90-day handoff and cross-training schedule.</p></div></div></section> : null}
+    <section className="demo-project-gallery" aria-labelledby="demo-gallery-title"><div className="demo-gallery-heading"><h2 id="demo-gallery-title">Project gallery</h2><span>Synthetic showcase images</span></div><div className="demo-gallery-grid">{["Structural steel package","Custom stair and rail","CNC cut components","Field installation"].map((caption, index) => <figure key={caption}><div className={`demo-gallery-art demo-gallery-art-${index + 1}`} role="img" aria-label={`Synthetic project photo: ${caption}`} /><figcaption>{caption}</figcaption></figure>)}</div></section>
   </>;
 }
 
 function DemoResultsView({ onReturn }: { onReturn: () => void }) {
-  const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "Northstar Metalworks & Fabrication", listingUrl: "https://example.com/kingdomhaus-demo/northstar-metalworks", listingText: demoListingText, askingPrice: "1250000", annualRevenue: "1800000", sde: "310000", ebitda: "240000", advertisedCashFlow: "380000", inventory: "35000", ffe: "180000", realEstate: "" }));
+  const [form, setForm] = useState<FormState>(() => ({ ...initialForm, businessName: "SummitForge Industrial Fabrication", listingUrl: "https://example.com/kingdomhaus-demo/summitforge-industrial-fabrication", listingText: demoListingText, askingPrice: "1250000", annualRevenue: "1800000", sde: "310000", ebitda: "240000", advertisedCashFlow: "380000", inventory: "35000", ffe: "180000", realEstate: "620000" }));
   const makeDemoScan = (corrections?: FormState) => buildLocalPreviewScan({
     businessName: form.businessName,
     listingUrl: form.listingUrl,
@@ -90,7 +96,7 @@ function DemoResultsView({ onReturn }: { onReturn: () => void }) {
     corrections
   });
   const [scan, setScan] = useState(() => makeDemoScan());
-  const [founderDecision, setFounderDecision] = useState<FounderDecision>({ decision: "Pass", rationale: "", nextDiligenceAction: "" });
+  const [founderDecision, setFounderDecision] = useState<FounderDecision>({ decision: "Reviewing", rationale: "", nextDiligenceAction: "" });
   const [session] = useState(() => new WorkspaceSession("public-demo", false, () => true));
   const refresh = () => setScan(makeDemoScan(form));
   const onFieldChange = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm(current => ({ ...current, [key]: value }));
